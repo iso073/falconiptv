@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:falconiptv/core/update/app_update_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -19,14 +21,15 @@ void main() {
       <String, dynamic>{
         'tag_name': 'v1.1.0+3',
         'body': 'Hata düzeltmeleri',
-        'assets': <Map<String, String>>[
-          <String, String>{
+        'assets': <Map<String, Object>>[
+          <String, Object>{
             'name': 'notes.txt',
             'browser_download_url': 'https://example.com/notes.txt',
           },
-          <String, String>{
+          <String, Object>{
             'name': 'falconiptv.apk',
             'browser_download_url': 'https://example.com/falconiptv.apk',
+            'size': 55956613,
           },
         ],
       },
@@ -35,7 +38,24 @@ void main() {
 
     expect(release, isNotNull);
     expect(release!.apkUrl, 'https://example.com/falconiptv.apk');
+    expect(release.apkSize, 55956613);
+    expect(release.cacheFileName, 'falconiptv-v1.1.0+3.apk');
     expect(release.version.isNewerThan(AppVersionInfo.current), isTrue);
+  });
+
+  test('indirilmiş APK aynı boyuttaysa yeniden indirilmez', () {
+    final Directory dir = Directory.systemTemp.createTempSync('falcon-apk');
+    final File file = File('${dir.path}/falconiptv-v1.0.1+2.apk');
+    file.writeAsBytesSync(List<int>.filled(AppUpdateCache.minApkBytes, 1));
+    addTearDown(() {
+      if (dir.existsSync()) {
+        dir.deleteSync(recursive: true);
+      }
+    });
+
+    expect(AppUpdateCache.isReusable(file, expectedSize: AppUpdateCache.minApkBytes), isTrue);
+    expect(AppUpdateCache.isReusable(file, expectedSize: AppUpdateCache.minApkBytes + 10), isFalse);
+    expect(AppUpdateCache.isReusable(File('${dir.path}/yok.apk')), isFalse);
   });
 
   test('GitHub yönlendirme adresinden sürüm etiketi okunur', () {

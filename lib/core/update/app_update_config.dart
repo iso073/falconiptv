@@ -1,3 +1,5 @@
+import 'dart:io';
+
 /// GitHub Releases kaynağı. Depo herkese açık olmalıdır.
 abstract final class AppUpdateConfig {
   static const String githubOwner = 'iso073';
@@ -5,8 +7,8 @@ abstract final class AppUpdateConfig {
   static const String apkAssetName = 'falconiptv.apk';
 
   /// pubspec.yaml `version` ile aynı tutulmalıdır.
-  static const String currentName = '1.0.1';
-  static const int currentCode = 2;
+  static const String currentName = '1.0.2';
+  static const int currentCode = 3;
 
   static const Duration checkInterval = Duration(hours: 12);
 
@@ -95,12 +97,23 @@ class GithubReleaseInfo {
     required this.version,
     required this.apkUrl,
     this.notes = '',
+    this.apkSize = 0,
   });
 
   final String tag;
   final AppVersionInfo version;
   final String apkUrl;
   final String notes;
+  final int apkSize;
+
+  String get cacheFileName {
+    final String safeTag = tag.replaceAll(RegExp(r'[^A-Za-z0-9._+-]'), '_');
+    return 'falconiptv-$safeTag.apk';
+  }
+
+  bool isReusableCache(File file) {
+    return AppUpdateCache.isReusable(file, expectedSize: apkSize);
+  }
 
   static GithubReleaseInfo? fromJson(Map<String, dynamic> json, {String preferredAsset = ''}) {
     final String tag = '${json['tag_name'] ?? json['name'] ?? ''}'.trim();
@@ -112,6 +125,7 @@ class GithubReleaseInfo {
       return null;
     }
     String? url;
+    int size = 0;
     for (final Object? asset in assetsRaw) {
       if (asset is! Map) {
         continue;
@@ -121,11 +135,16 @@ class GithubReleaseInfo {
       if (!name.endsWith('.apk') || browser.isEmpty) {
         continue;
       }
+      final int assetSize = int.tryParse('${asset['size'] ?? ''}') ?? 0;
       if (preferredAsset.isNotEmpty && name == preferredAsset.toLowerCase()) {
         url = browser;
+        size = assetSize;
         break;
       }
       url ??= browser;
+      if (url == browser) {
+        size = assetSize;
+      }
     }
     if (url == null) {
       return null;
@@ -135,6 +154,25 @@ class GithubReleaseInfo {
       version: AppVersionInfo.parse(tag),
       apkUrl: url,
       notes: '${json['body'] ?? ''}'.trim(),
+      apkSize: size,
     );
+  }
+}
+
+abstract final class AppUpdateCache {
+  static const int minApkBytes = 1024 * 1024;
+
+  static bool isReusable(File file, {int expectedSize = 0}) {
+    if (!file.existsSync()) {
+      return false;
+    }
+    final int length = file.lengthSync();
+    if (length < minApkBytes) {
+      return false;
+    }
+    if (expectedSize > 0 && length != expectedSize) {
+      return false;
+    }
+    return true;
   }
 }

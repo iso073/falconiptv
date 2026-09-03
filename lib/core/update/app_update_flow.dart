@@ -45,6 +45,18 @@ abstract final class AppUpdateFlow {
       if (!install || !context.mounted) {
         return;
       }
+      final File? cached = await service.cachedApk(update);
+      if (cached != null) {
+        if (context.mounted) {
+          TvToastService.show(
+            context,
+            'İndirilmiş paket kullanılıyor. Yeniden indirilmiyor.',
+            type: TvToastType.success,
+          );
+        }
+        await _install(context, service, cached);
+        return;
+      }
       await _downloadAndInstall(context, service, update);
     } catch (_) {
       if (force && context.mounted) {
@@ -125,7 +137,7 @@ abstract final class AppUpdateFlow {
       if (context.mounted) {
         Navigator.of(context, rootNavigator: true).pop();
       }
-      await service.installApk(file);
+      await _install(context, service, file);
     } catch (_) {
       if (context.mounted) {
         Navigator.of(context, rootNavigator: true).pop();
@@ -134,5 +146,37 @@ abstract final class AppUpdateFlow {
     } finally {
       progress.dispose();
     }
+  }
+
+  static Future<void> _install(
+    BuildContext context,
+    AppUpdateService service,
+    File file,
+  ) async {
+    if (!await service.canInstallPackages()) {
+      if (context.mounted) {
+        TvToastService.show(
+          context,
+          'Bilinmeyen uygulamaların yüklenmesine izin veriniz, ardından yeniden deneyiniz.',
+        );
+      }
+      await service.openInstallPermission();
+      return;
+    }
+    if (!await service.canInstallOverCurrent(file)) {
+      if (context.mounted) {
+        await showNeonConfirmDialog(
+          context: context,
+          title: 'Kurulum Engellendi',
+          message:
+              'Yüklü kopya farklı bir imza ile kurulmuş. Uygulamayı bir kez kaldırıp yeni falconiptv.apk dosyasını yükleyiniz. Sonraki güncellemeler sorunsuz kurulur.',
+          cancelLabel: 'Kapat',
+          confirmLabel: 'Tamam',
+          confirmColor: AppColors.neonCyan,
+        );
+      }
+      return;
+    }
+    await service.installApk(file);
   }
 }

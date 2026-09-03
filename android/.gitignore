@@ -12,3 +12,7 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Sideload OTA requires one stable key for GitHub Actions and local builds.
+!key.properties
+!**/falcon-release.jks

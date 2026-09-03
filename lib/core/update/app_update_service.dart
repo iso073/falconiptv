@@ -80,11 +80,28 @@ class AppUpdateService {
     if (tag == null || tag.isEmpty) {
       return null;
     }
+    final String apkUrl = AppUpdateConfig.apkUrlForTag(tag);
     return GithubReleaseInfo(
       tag: tag,
       version: AppVersionInfo.parse(tag),
-      apkUrl: AppUpdateConfig.apkUrlForTag(tag),
+      apkUrl: apkUrl,
+      apkSize: await _remoteApkSize(apkUrl),
     );
+  }
+
+  Future<int> _remoteApkSize(String url) async {
+    try {
+      final Response<dynamic> response = await _dio.head<dynamic>(
+        url,
+        options: Options(
+          followRedirects: true,
+          validateStatus: (int? status) => status != null && status < 400,
+        ),
+      );
+      return int.tryParse(response.headers.value('content-length') ?? '') ?? 0;
+    } catch (_) {
+      return 0;
+    }
   }
 
   Future<GithubReleaseInfo?> availableUpdate() async {
@@ -95,17 +112,24 @@ class AppUpdateService {
     return latest;
   }
 
+  Future<File?> cachedApk(GithubReleaseInfo release) async {
+    final File file = await _apkFile(release);
+    if (release.isReusableCache(file)) {
+      return file;
+    }
+    return null;
+  }
+
   Future<File> downloadApk(
     GithubReleaseInfo release, {
     void Function(int received, int total)? onProgress,
   }) async {
-    final String cacheDir = await _channel.invokeMethod<String>('getCacheDir') ??
-        Directory.systemTemp.path;
-    final Directory folder = Directory('$cacheDir/updates');
-    if (!folder.existsSync()) {
-      folder.createSync(recursive: true);
+    final File? existing = await cachedApk(release);
+    if (existing != null) {
+      return existing;
     }
-    final File file = File('${folder.path}/${AppUpdateConfig.apkAssetName}');
+
+    final File file = await _apkFile(release);
     if (file.existsSync()) {
       file.deleteSync();
     }
@@ -123,6 +147,24 @@ class AppUpdateService {
       ),
     );
     return file;
+  }
+
+  Future<File> _apkFile(GithubReleaseInfo release) async {
+    final String cacheDir = await _channel.invokeMethod<String>('getCacheDir') ??
+        Directory.systemTemp.path;
+    final Directory folder = Directory('$cacheDir/updates');
+    if (!folder.existsSync()) {
+      folder.createSync(recursive: true);
+    }
+    return File('${folder.path}/${release.cacheFileName}');
+  }
+
+  Future<bool> canInstallOverCurrent(File file) async {
+    try {
+      return await _channel.invokeMethod<bool>('canInstallOverCurrent', file.path) ?? true;
+    } catch (_) {
+      return true;
+    }
   }
 
   Future<bool> canInstallPackages() async {
