@@ -1,0 +1,27 @@
+name: Release APK
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: flutter build apk --release
+      - name: Rename APK
+        run: cp build/app/outputs/flutter-apk/app-release.apk falconiptv.apk
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: falconiptv.apk
+          generate_release_notes: true
+          fail_on_unmatched_files: true
