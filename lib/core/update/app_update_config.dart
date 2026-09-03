@@ -1,6 +1,6 @@
 /// GitHub Releases kaynağı. Depo herkese açık olmalıdır.
 abstract final class AppUpdateConfig {
-  static const String githubOwner = 'riza0';
+  static const String githubOwner = 'iso073';
   static const String githubRepo = 'falconiptv';
   static const String apkAssetName = 'falconiptv.apk';
 
