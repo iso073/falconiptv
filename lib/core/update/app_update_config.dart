@@ -5,13 +5,30 @@ abstract final class AppUpdateConfig {
   static const String apkAssetName = 'falconiptv.apk';
 
   /// pubspec.yaml `version` ile aynı tutulmalıdır.
-  static const String currentName = '1.0.0';
-  static const int currentCode = 1;
+  static const String currentName = '1.0.1';
+  static const int currentCode = 2;
 
   static const Duration checkInterval = Duration(hours: 12);
 
   static String get latestApiUrl =>
       'https://api.github.com/repos/$githubOwner/$githubRepo/releases/latest';
+
+  static String get latestPageUrl =>
+      'https://github.com/$githubOwner/$githubRepo/releases/latest';
+
+  static String apkUrlForTag(String tag) {
+    final String safeTag = tag.startsWith('v') || tag.startsWith('V') ? tag : 'v$tag';
+    return 'https://github.com/$githubOwner/$githubRepo/releases/download/$safeTag/$apkAssetName';
+  }
+
+  static String? tagFromReleaseUrl(String location) {
+    final List<String> parts = location.split('/');
+    final int tagIndex = parts.lastIndexOf('tag');
+    if (tagIndex == -1 || tagIndex + 1 >= parts.length) {
+      return null;
+    }
+    return Uri.decodeComponent(parts[tagIndex + 1].split('?').first);
+  }
 }
 
 class AppVersionInfo {

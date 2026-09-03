@@ -5,28 +5,16 @@ import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
 
 import '../constants/hive_boxes.dart';
+import '../network/iptv_dio_client.dart';
 import 'app_update_config.dart';
 
 class AppUpdateService {
-  AppUpdateService(this._settingsBox, {Dio? dio}) : _dio = dio ?? _githubDio();
+  AppUpdateService(this._settingsBox, {Dio? dio}) : _dio = dio ?? IptvDioClient.create();
 
   final Box<dynamic> _settingsBox;
   final Dio _dio;
 
   static const MethodChannel _channel = MethodChannel('falconiptv/update');
-
-  static Dio _githubDio() {
-    return Dio(
-      BaseOptions(
-        connectTimeout: const Duration(seconds: 12),
-        receiveTimeout: const Duration(seconds: 120),
-        headers: const <String, String>{
-          'User-Agent': 'FalconIPTV',
-          'Accept': 'application/vnd.github+json',
-        },
-      ),
-    );
-  }
 
   bool get shouldAutoCheck {
     final Object? raw = _settingsBox.get(HiveBoxes.lastUpdateCheckKey);
@@ -42,6 +30,14 @@ class AppUpdateService {
   }
 
   Future<GithubReleaseInfo?> fetchLatest() async {
+    try {
+      return await _fetchFromApi();
+    } catch (_) {
+      return _fetchFromReleasesPage();
+    }
+  }
+
+  Future<GithubReleaseInfo?> _fetchFromApi() async {
     final Response<dynamic> response = await _dio.get<dynamic>(AppUpdateConfig.latestApiUrl);
     if (response.statusCode == 404) {
       return null;
@@ -57,9 +53,37 @@ class AppUpdateService {
     if (data is! Map) {
       return null;
     }
+    final Map<String, dynamic> json = Map<String, dynamic>.from(data);
+    if ('${json['message']}' == 'Not Found') {
+      return null;
+    }
     return GithubReleaseInfo.fromJson(
-      Map<String, dynamic>.from(data),
+      json,
       preferredAsset: AppUpdateConfig.apkAssetName,
+    );
+  }
+
+  Future<GithubReleaseInfo?> _fetchFromReleasesPage() async {
+    final Response<dynamic> response = await _dio.get<dynamic>(
+      AppUpdateConfig.latestPageUrl,
+      options: Options(
+        followRedirects: false,
+        validateStatus: (int? status) =>
+            status != null && (status < 400 || status == 301 || status == 302 || status == 303),
+      ),
+    );
+    if (response.statusCode == 404) {
+      return null;
+    }
+    final String location = response.headers.value('location') ?? response.realUri.toString();
+    final String? tag = AppUpdateConfig.tagFromReleaseUrl(location);
+    if (tag == null || tag.isEmpty) {
+      return null;
+    }
+    return GithubReleaseInfo(
+      tag: tag,
+      version: AppVersionInfo.parse(tag),
+      apkUrl: AppUpdateConfig.apkUrlForTag(tag),
     );
   }
 

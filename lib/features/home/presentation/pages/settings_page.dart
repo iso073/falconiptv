@@ -313,10 +313,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   const Center(child: FalconLogo(height: 72)),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Sürüm ${AppVersionInfo.current.name}',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
                   ),
                 ],
               ),

@@ -37,4 +37,13 @@ void main() {
     expect(release!.apkUrl, 'https://example.com/falconiptv.apk');
     expect(release.version.isNewerThan(AppVersionInfo.current), isTrue);
   });
+
+  test('GitHub yönlendirme adresinden sürüm etiketi okunur', () {
+    expect(
+      AppUpdateConfig.tagFromReleaseUrl(
+        'https://github.com/iso073/falconiptv/releases/tag/v1.0.1+2',
+      ),
+      'v1.0.1+2',
+    );
+  });
 }
