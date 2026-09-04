@@ -7,8 +7,8 @@ abstract final class AppUpdateConfig {
   static const String apkAssetName = 'falconiptv.apk';
 
   /// pubspec.yaml `version` ile aynı tutulmalıdır.
-  static const String currentName = '1.0.4';
-  static const int currentCode = 5;
+  static const String currentName = '1.0.5';
+  static const int currentCode = 6;
 
   static const Duration checkInterval = Duration(hours: 12);
 
