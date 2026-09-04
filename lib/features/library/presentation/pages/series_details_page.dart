@@ -176,8 +176,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                 autofocus: index == 0,
                 onActivate: () => PlaybackLauncher.openPlaylist(
                   context,
-                  season.episodes,
-                  index: index,
+                  details.allEpisodes,
+                  index: details.episodeOffset(_seasonIndex, index),
                 ),
               );
             },

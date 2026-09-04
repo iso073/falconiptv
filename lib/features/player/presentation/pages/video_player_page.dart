@@ -8,6 +8,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../../../core/network/iptv_dio_client.dart';
 import '../../../../core/playback/playback_keep_awake.dart';
+import '../../../../core/services/tv_toast_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/exit_confirm_dialog.dart';
 import '../../../../core/widgets/neon_focus_card.dart';
@@ -20,6 +21,7 @@ import '../../../library/presentation/playback_launcher.dart';
 import '../../data/exoplayer_buffer_settings.dart';
 import '../../data/hls_track_parser.dart';
 import '../../domain/player_aspect_ratio.dart';
+import '../../../settings/data/sport_mode_repository.dart';
 
 class VideoPlayerPage extends StatefulWidget {
   const VideoPlayerPage({
@@ -63,6 +65,8 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
   String? _captionText;
   bool _resumeApplied = false;
   bool _stopped = false;
+  bool _autoAdvancing = false;
+  bool _endHandled = false;
   VideoPlayerController? _opening;
   final Set<VideoPlayerController> _released = <VideoPlayerController>{};
   final FocusNode _focusNode = FocusNode();
@@ -70,6 +74,16 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
   PlayableItem get _current => widget.playlist[_index];
 
   bool get _isOnDemand => _current.kind != PlayableKind.live;
+
+  bool get _isSeriesEpisode =>
+      _current.kind == PlayableKind.series && _current.streamUrl.isNotEmpty;
+
+  static const MethodChannel _exoChannel = MethodChannel('falconiptv/exoplayer');
+
+  ExoPlayerBufferSettings get _buffer {
+    final bool sportOn = context.read<SportModeRepository>().enabled;
+    return ExoPlayerBufferSettings.current(sportMode: sportOn);
+  }
 
   @override
   void initState() {
@@ -172,6 +186,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
     if (_stopped) {
       return;
     }
+    _endHandled = false;
     _progressTimer?.cancel();
     final VideoPlayerController? previous = _controller;
     previous?.removeListener(_onPlayerUpdate);
@@ -182,6 +197,14 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
         _reconnectAttempt = 0;
       }
     });
+
+    final ExoPlayerBufferSettings buffer = _buffer;
+    try {
+      await _exoChannel.invokeMethod<void>(
+        'setSportMode',
+        context.read<SportModeRepository>().enabled,
+      );
+    } catch (_) {}
 
     final Uri uri = Uri.parse(_current.streamUrl);
     final VideoPlayerController next = VideoPlayerController.networkUrl(
@@ -203,7 +226,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
         await _releaseController(next);
         return;
       }
-      await _waitForBuffer(next);
+      await _waitForBuffer(next, buffer);
       if (_stopped || !mounted) {
         await _releaseController(next);
         return;
@@ -254,16 +277,22 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
     }
   }
 
-  Future<void> _waitForBuffer(VideoPlayerController controller) async {
-    final Duration target = Duration(milliseconds: ExoPlayerBufferSettings.bufferForPlaybackMs);
-    final DateTime deadline = DateTime.now().add(const Duration(seconds: 8));
+  Future<void> _waitForBuffer(
+    VideoPlayerController controller,
+    ExoPlayerBufferSettings buffer,
+  ) async {
+    final Duration target = Duration(milliseconds: buffer.bufferForPlaybackMs);
+    final DateTime started = DateTime.now();
+    final DateTime deadline = started.add(buffer.readyWait);
     while (DateTime.now().isBefore(deadline)) {
       if (_stopped || !mounted) {
         return;
       }
-      final List<DurationRange> ranges = controller.value.buffered;
-      if (ranges.isNotEmpty && ranges.last.end >= target) {
-        return;
+      if (DateTime.now().difference(started) >= buffer.minHold) {
+        final List<DurationRange> ranges = controller.value.buffered;
+        if (ranges.isNotEmpty && ranges.last.end >= target) {
+          return;
+        }
       }
       await Future<void>.delayed(const Duration(milliseconds: 120));
     }
@@ -280,6 +309,54 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
     }
     if (controller.value.hasError) {
       _handlePlaybackFailure();
+    }
+    if (_isSeriesEpisode && _shouldAdvanceEpisode(controller.value)) {
+      unawaited(_playNextEpisode());
+    }
+  }
+
+  bool _shouldAdvanceEpisode(VideoPlayerValue value) {
+    if (_autoAdvancing || _endHandled || _stopped || _loading || !value.isInitialized || value.hasError) {
+      return false;
+    }
+    if (value.duration.inSeconds < 3) {
+      return false;
+    }
+    if (value.isCompleted) {
+      return true;
+    }
+    return value.position >= value.duration - const Duration(milliseconds: 800);
+  }
+
+  Future<void> _playNextEpisode() async {
+    if (_autoAdvancing || _stopped) {
+      return;
+    }
+    if (_index + 1 >= widget.playlist.length) {
+      _endHandled = true;
+      if (mounted) {
+        TvToastService.show(
+          context,
+          'Son bölüm. İzleme tamamlandı.',
+          type: TvToastType.info,
+        );
+      }
+      return;
+    }
+    _autoAdvancing = true;
+    _saveProgress();
+    _index += 1;
+    if (mounted) {
+      TvToastService.show(
+        context,
+        'Sonraki bölüm: ${_current.title}',
+        type: TvToastType.success,
+      );
+    }
+    try {
+      await _openCurrent();
+    } finally {
+      _autoAdvancing = false;
     }
   }
 
@@ -415,7 +492,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
     if (_stopped || _reconnecting) {
       return;
     }
-    if (_reconnectAttempt >= ExoPlayerBufferSettings.maxReconnectAttempts) {
+    if (_reconnectAttempt >= _buffer.maxReconnectAttempts) {
       if (mounted) {
         setState(() {
           _loading = false;
@@ -761,7 +838,25 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
               else
                 const ColoredBox(color: Colors.black),
               if (_loading)
-                const Center(child: CircularProgressIndicator(color: AppColors.neonCyan)),
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(color: AppColors.neonCyan),
+                      if (context.read<SportModeRepository>().enabled) ...[
+                        const SizedBox(height: 18),
+                        const Text(
+                          'Spor modu ayarlanıyor',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.neonCyan,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               if (_error != null)
                 Center(
                   child: Padding(
@@ -811,7 +906,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
                               Expanded(
                                 child: Text(
                                   '${_current.category}  •  Ses $_selectedAudio  •  Altyazı $_selectedSubtitle'
-                                  '${_reconnectAttempt > 0 ? '  •  Yeniden bağlanma $_reconnectAttempt/${ExoPlayerBufferSettings.maxReconnectAttempts}' : ''}',
+                                  '${_reconnectAttempt > 0 ? '  •  Yeniden bağlanma $_reconnectAttempt/${_buffer.maxReconnectAttempts}' : ''}',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(

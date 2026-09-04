@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/services/tv_toast_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/exit_confirm_dialog.dart';
 import '../../../../core/widgets/glassmorphism_bar.dart';
 import '../../../../core/widgets/neon_focus_card.dart';
 import '../../../../core/widgets/tv_text_field.dart';
@@ -14,14 +15,16 @@ import '../cubit/profile_cubit.dart';
 import 'qr_add_profile_page.dart';
 
 class AddProfilePage extends StatefulWidget {
-  const AddProfilePage({super.key});
+  const AddProfilePage({super.key, this.existing});
+
+  final ProfileModel? existing;
 
   @override
   State<AddProfilePage> createState() => _AddProfilePageState();
 }
 
 class _AddProfilePageState extends State<AddProfilePage> {
-  ProfileType _selectedType = ProfileType.xtream;
+  late ProfileType _selectedType;
 
   final TextEditingController _profileName = TextEditingController();
   final TextEditingController _serverUrl = TextEditingController();
@@ -30,6 +33,23 @@ class _AddProfilePageState extends State<AddProfilePage> {
   final TextEditingController _m3uUrl = TextEditingController();
   final FocusNode _saveFocusNode = FocusNode(debugLabel: 'Kaydet');
   bool _saving = false;
+  bool _deleting = false;
+
+  bool get _isEditing => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final ProfileModel? existing = widget.existing;
+    _selectedType = existing?.type ?? ProfileType.xtream;
+    if (existing != null) {
+      _profileName.text = existing.profileName;
+      _serverUrl.text = existing.serverUrl ?? '';
+      _username.text = existing.username ?? '';
+      _password.text = existing.password ?? '';
+      _m3uUrl.text = existing.m3uUrl ?? '';
+    }
+  }
 
   @override
   void dispose() {
@@ -60,13 +80,13 @@ class _AddProfilePageState extends State<AddProfilePage> {
         return null;
       }
       return ProfileModel(
-        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        id: widget.existing?.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
         profileName: profileName,
         type: ProfileType.xtream,
         serverUrl: _serverUrl.text.trim(),
         username: _username.text.trim(),
         password: _password.text.trim(),
-        createdDate: DateTime.now(),
+        createdDate: widget.existing?.createdDate ?? DateTime.now(),
       );
     }
 
@@ -78,11 +98,11 @@ class _AddProfilePageState extends State<AddProfilePage> {
       return null;
     }
     return ProfileModel(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      id: widget.existing?.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
       profileName: profileName,
       type: ProfileType.m3u,
       m3uUrl: _m3uUrl.text.trim(),
-      createdDate: DateTime.now(),
+      createdDate: widget.existing?.createdDate ?? DateTime.now(),
     );
   }
 
@@ -125,7 +145,11 @@ class _AddProfilePageState extends State<AddProfilePage> {
     if (!mounted) {
       return;
     }
-    await context.read<ProfileCubit>().addProfile(profile);
+    if (_isEditing) {
+      await context.read<ProfileCubit>().updateProfile(profile);
+    } else {
+      await context.read<ProfileCubit>().addProfile(profile);
+    }
     if (!mounted) {
       return;
     }
@@ -135,7 +159,39 @@ class _AddProfilePageState extends State<AddProfilePage> {
     }
     TvToastService.show(
       context,
-      'Profil doğrulandı ve kaydedildi.',
+      _isEditing ? 'Profil güncellendi.' : 'Profil doğrulandı ve kaydedildi.',
+      type: TvToastType.success,
+    );
+    Navigator.of(context).pop();
+  }
+
+  Future<void> _delete() async {
+    final ProfileModel? existing = widget.existing;
+    if (existing == null || _deleting || _saving) {
+      return;
+    }
+    final bool confirmed = await showNeonConfirmDialog(
+      context: context,
+      title: 'Profil Sil',
+      message: '"${existing.profileName}" profilini silmek istediğinize emin misiniz?',
+      cancelLabel: 'Hayır',
+      confirmLabel: 'Sil',
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
+    setState(() => _deleting = true);
+    await context.read<ProfileCubit>().deleteProfile(existing.id);
+    if (!mounted) {
+      return;
+    }
+    setState(() => _deleting = false);
+    if (context.read<ProfileCubit>().state is ProfileError) {
+      return;
+    }
+    TvToastService.show(
+      context,
+      '"${existing.profileName}" profili silindi.',
       type: TvToastType.success,
     );
     Navigator.of(context).pop();
@@ -181,39 +237,40 @@ class _AddProfilePageState extends State<AddProfilePage> {
                         child: const Center(child: Icon(Icons.arrow_back_rounded)),
                       ),
                       const SizedBox(width: 16),
-                      const Text(
-                        'Yeni Profil Oluştur',
-                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                      Text(
+                        _isEditing ? 'Profili Düzenle' : 'Yeni Profil Oluştur',
+                        style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
                       ),
                       const Spacer(),
-                      NeonFocusCard(
-                        glowColor: AppColors.neonCyan,
-                        focusedScale: 1.06,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        onActivate: () {
-                          Navigator.of(context).push(
-                            PageRouteBuilder<void>(
-                              transitionDuration: const Duration(milliseconds: 300),
-                              pageBuilder: (context, animation, secondaryAnimation) =>
-                                  const QrAddProfilePage(),
-                              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                return FadeTransition(opacity: animation, child: child);
-                              },
-                            ),
-                          );
-                        },
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.qr_code_2_rounded, color: AppColors.neonCyan),
-                            SizedBox(width: 8),
-                            Text(
-                              'Telefondan',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                            ),
-                          ],
+                      if (!_isEditing)
+                        NeonFocusCard(
+                          glowColor: AppColors.neonCyan,
+                          focusedScale: 1.06,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          onActivate: () {
+                            Navigator.of(context).push(
+                              PageRouteBuilder<void>(
+                                transitionDuration: const Duration(milliseconds: 300),
+                                pageBuilder: (context, animation, secondaryAnimation) =>
+                                    const QrAddProfilePage(),
+                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                  return FadeTransition(opacity: animation, child: child);
+                                },
+                              ),
+                            );
+                          },
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.qr_code_2_rounded, color: AppColors.neonCyan),
+                              SizedBox(width: 8),
+                              Text(
+                                'Telefondan',
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -287,7 +344,7 @@ class _AddProfilePageState extends State<AddProfilePage> {
                                 child: TvTextField(
                                   label: 'Profil Adı',
                                   controller: _profileName,
-                                  autofocus: true,
+                                  autofocus: false,
                                   textInputAction: TextInputAction.next,
                                   onSubmitted: (_) => FocusScope.of(context).nextFocus(),
                                 ),
@@ -338,17 +395,63 @@ class _AddProfilePageState extends State<AddProfilePage> {
                                 ),
                               ],
                               const SizedBox(height: 28),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: FocusTraversalOrder(
-                                  order: const NumericFocusOrder(11),
-                                  child: _SaveButton(
-                                    focusNode: _saveFocusNode,
-                                    onKeyEvent: _onSaveKey,
-                                    onActivate: _save,
-                                    busy: _saving,
+                              Row(
+                                children: [
+                                  if (_isEditing) ...[
+                                    FocusTraversalOrder(
+                                      order: const NumericFocusOrder(10),
+                                      child: NeonFocusCard(
+                                        glowColor: AppColors.danger,
+                                        focusedScale: 1.04,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 22,
+                                          vertical: 16,
+                                        ),
+                                        onActivate: _delete,
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            if (_deleting)
+                                              const SizedBox(
+                                                height: 22,
+                                                width: 22,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 3,
+                                                  color: AppColors.danger,
+                                                ),
+                                              )
+                                            else ...[
+                                              const Icon(
+                                                Icons.delete_outline,
+                                                color: AppColors.danger,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              const Text(
+                                                'Profili Sil',
+                                                style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: AppColors.danger,
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                  ] else
+                                    const Spacer(),
+                                  FocusTraversalOrder(
+                                    order: const NumericFocusOrder(11),
+                                    child: _SaveButton(
+                                      focusNode: _saveFocusNode,
+                                      onKeyEvent: _onSaveKey,
+                                      onActivate: _save,
+                                      busy: _saving,
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
                             ],
                           ),

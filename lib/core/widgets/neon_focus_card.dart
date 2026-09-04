@@ -202,18 +202,15 @@ class _NeonFocusCardState extends State<NeonFocusCard> {
                 borderRadius: BorderRadius.circular(widget.borderRadius),
                 border: Border.all(
                   color: _focused ? widget.glowColor : AppColors.glassBorder,
-                  width: _focused ? 3 : 1,
+                  width: 3,
                 ),
                 boxShadow: _focused
                     ? [
                         BoxShadow(
-                          color: widget.glowColor.withValues(alpha: 0.55),
-                          blurRadius: 26,
-                          spreadRadius: 1,
-                        ),
-                        BoxShadow(
-                          color: widget.glowColor.withValues(alpha: 0.25),
-                          blurRadius: 48,
+                          color: widget.glowColor.withValues(alpha: 0.45),
+                          blurRadius: 16,
+                          spreadRadius: 0,
+                          offset: Offset.zero,
                         ),
                       ]
                     : const [],

@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/services/tv_toast_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/update/app_update_status_badge.dart';
+import '../../../settings/presentation/widgets/sport_mode_status_badge.dart';
 import '../../../../core/widgets/exit_confirm_dialog.dart';
 import '../../../../core/widgets/falcon_logo.dart';
 import '../../../../core/widgets/glassmorphism_bar.dart';
@@ -46,38 +48,16 @@ class ProfileSelectionPage extends StatelessWidget {
     );
   }
 
-  Future<void> _openAddProfile(BuildContext context) async {
+  Future<void> _openAddProfile(BuildContext context, {ProfileModel? existing}) async {
     await Navigator.of(context).push(
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 300),
-        pageBuilder: (context, animation, secondaryAnimation) => const AddProfilePage(),
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            AddProfilePage(existing: existing),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
         },
       ),
-    );
-  }
-
-  Future<void> showDeleteDialog(BuildContext context, ProfileModel profile) async {
-    final bool confirmed = await showNeonConfirmDialog(
-      context: context,
-      title: 'Profil Sil',
-      message: 'Bu profili silmek istediğinize emin misiniz?',
-      cancelLabel: 'Hayır',
-      confirmLabel: 'Evet',
-    );
-    if (!confirmed || !context.mounted) {
-      return;
-    }
-    final ProfileCubit cubit = context.read<ProfileCubit>();
-    await cubit.deleteProfile(profile.id);
-    if (!context.mounted || cubit.state is ProfileError) {
-      return;
-    }
-    TvToastService.show(
-      context,
-      '"${profile.profileName}" profili silindi.',
-      type: TvToastType.success,
     );
   }
 
@@ -98,6 +78,7 @@ class ProfileSelectionPage extends StatelessWidget {
                     child: Row(
                       children: [
                         const FalconLogo(height: 52, glow: true),
+                        const SportModeStatusBadge(),
                         const SizedBox(width: 16),
                         Text(
                           'Profil Seçimi',
@@ -107,12 +88,7 @@ class ProfileSelectionPage extends StatelessWidget {
                               ),
                         ),
                         const Spacer(),
-                        Text(
-                          'Sisteme Hoş Geldiniz',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                        ),
+                        const AppUpdateStatusBadge(),
                       ],
                     ),
                   ),
@@ -254,7 +230,8 @@ class ProfileSelectionPage extends StatelessWidget {
                                                 ? AppColors.neonCyan
                                                 : AppColors.neonPurple,
                                             onActivate: () => navigateToHome(context, profile),
-                                            onLongPress: () => showDeleteDialog(context, profile),
+                                            onLongPress: () =>
+                                                _openAddProfile(context, existing: profile),
                                             child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
@@ -306,7 +283,7 @@ class ProfileSelectionPage extends StatelessWidget {
                                             ),
                                           ),
                                         ),
-                                        const SizedBox(height: 10),
+                                        const SizedBox(height: 20),
                                         SizedBox(
                                           height: 46,
                                           child: NeonFocusCard(
@@ -314,21 +291,22 @@ class ProfileSelectionPage extends StatelessWidget {
                                             borderRadius: 14,
                                             focusedScale: 1.06,
                                             unfocusedOpacity: 0.85,
-                                            glowColor: AppColors.danger,
-                                            onActivate: () => showDeleteDialog(context, profile),
+                                            glowColor: AppColors.neonCyan,
+                                            onActivate: () =>
+                                                _openAddProfile(context, existing: profile),
                                             child: const Row(
                                               mainAxisAlignment: MainAxisAlignment.center,
                                               children: [
                                                 Icon(
-                                                  Icons.delete_outline,
-                                                  color: AppColors.danger,
+                                                  Icons.edit_outlined,
+                                                  color: AppColors.neonCyan,
                                                   size: 22,
                                                 ),
                                                 SizedBox(width: 8),
                                                 Text(
-                                                  'Profili Sil',
+                                                  'Düzenle',
                                                   style: TextStyle(
-                                                    color: AppColors.danger,
+                                                    color: AppColors.neonCyan,
                                                     fontSize: 16,
                                                     fontWeight: FontWeight.w800,
                                                   ),
@@ -345,8 +323,8 @@ class ProfileSelectionPage extends StatelessWidget {
                             ),
                             const SizedBox(height: 8),
                             const Text(
-                              'Silmek için kartın altındaki "Profili Sil" düğmesine ilerleyebilir '
-                              'veya kart üzerinde OK tuşunu basılı tutabilirsiniz.',
+                              'Düzenlemek veya silmek için kartın altındaki "Düzenle" düğmesine '
+                              'ilerleyiniz. Kart üzerinde OK tuşunu basılı tutmak da düzenlemeyi açar.',
                               style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
                             ),
                           ],

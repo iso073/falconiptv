@@ -7,4 +7,5 @@ abstract final class HiveBoxes {
   static const String favorites = 'favorites';
   static const String watchProgress = 'watch_progress';
   static const String lastUpdateCheckKey = 'last_update_check_ms';
+  static const String sportModeKey = 'sport_mode_enabled';
 }

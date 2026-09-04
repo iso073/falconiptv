@@ -6,6 +6,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/update/app_update_flow.dart';
 import '../../../../core/update/app_update_service.dart';
+import '../../../../core/update/app_update_status_badge.dart';
+import '../../../settings/presentation/widgets/sport_mode_status_badge.dart';
 import '../../../../core/widgets/exit_confirm_dialog.dart';
 import '../../../../core/widgets/falcon_logo.dart';
 import '../../../../core/widgets/glassmorphism_bar.dart';
@@ -132,7 +134,10 @@ class _XCIPTVHomePageState extends State<XCIPTVHomePage> {
                     child: Row(
                       children: [
                         const FalconLogo(height: 54, glow: true),
+                        const SportModeStatusBadge(),
                         const Spacer(),
+                        const AppUpdateStatusBadge(),
+                        const SizedBox(width: 14),
                         const _ConnectionBadge(),
                         const SizedBox(width: 18),
                         Column(

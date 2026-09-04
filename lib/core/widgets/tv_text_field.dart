@@ -33,6 +33,7 @@ class _TvTextFieldState extends State<TvTextField> {
   late final FocusNode _ownedNode;
   FocusNode get _focusNode => widget.focusNode ?? _ownedNode;
   bool _focused = false;
+  bool _editing = false;
 
   @override
   void initState() {
@@ -51,18 +52,66 @@ class _TvTextFieldState extends State<TvTextField> {
   }
 
   void _onFocus() {
-    setState(() => _focused = _focusNode.hasFocus);
+    final bool hasFocus = _focusNode.hasFocus;
+    setState(() {
+      _focused = hasFocus;
+      if (!hasFocus) {
+        _editing = false;
+      }
+    });
+    if (!hasFocus) {
+      SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+    }
+  }
+
+  bool _isActivateKey(LogicalKeyboardKey key) {
+    return key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.select ||
+        key == LogicalKeyboardKey.gameButtonA ||
+        key == LogicalKeyboardKey.space;
+  }
+
+  void _beginEdit() {
+    if (_editing) {
+      return;
+    }
+    setState(() => _editing = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _focusNode.requestFocus();
+      SystemChannels.textInput.invokeMethod<void>('TextInput.show');
+    });
+  }
+
+  void _endEdit() {
+    if (!_editing) {
+      return;
+    }
+    setState(() => _editing = false);
+    SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) {
       return KeyEventResult.ignored;
     }
+    if (_isActivateKey(event.logicalKey)) {
+      if (_editing) {
+        return KeyEventResult.ignored;
+      }
+      _beginEdit();
+      return KeyEventResult.handled;
+    }
     if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      _endEdit();
       FocusScope.of(context).nextFocus();
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      _endEdit();
       FocusScope.of(context).previousFocus();
       return KeyEventResult.handled;
     }
@@ -88,14 +137,22 @@ class _TvTextFieldState extends State<TvTextField> {
         focusNode: _focusNode,
         controller: widget.controller,
         autofocus: widget.autofocus,
+        readOnly: !_editing,
+        showCursor: _editing,
+        enableInteractiveSelection: _editing,
         obscureText: widget.obscureText,
-        keyboardType: widget.keyboardType,
+        keyboardType: _editing ? widget.keyboardType : TextInputType.none,
         textInputAction: widget.textInputAction,
+        onTap: _beginEdit,
         onEditingComplete: () {},
-        onSubmitted: widget.onSubmitted ??
-            (_) {
-              FocusScope.of(context).nextFocus();
-            },
+        onSubmitted: (String value) {
+          _endEdit();
+          if (widget.onSubmitted != null) {
+            widget.onSubmitted!(value);
+            return;
+          }
+          FocusScope.of(context).nextFocus();
+        },
         style: const TextStyle(fontSize: 20, color: AppColors.textPrimary),
         cursorColor: AppColors.neonCyan,
         decoration: InputDecoration(

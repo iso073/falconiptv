@@ -8,6 +8,7 @@ import 'core/constants/hive_boxes.dart';
 import 'core/network/iptv_dio_client.dart';
 import 'core/theme/app_theme.dart';
 import 'core/update/app_update_service.dart';
+import 'core/update/update_status_cubit.dart';
 import 'features/home/presentation/cubit/connection_cubit.dart';
 import 'features/iptv/data/repositories/iptv_catalog_repository.dart';
 import 'features/iptv/data/repositories/m3u_repository.dart';
@@ -17,6 +18,8 @@ import 'features/library/data/watch_progress_repository.dart';
 import 'features/profile/data/repositories/profile_repository.dart';
 import 'features/profile/presentation/cubit/profile_cubit.dart';
 import 'features/settings/data/parental_control_repository.dart';
+import 'features/settings/data/sport_mode_repository.dart';
+import 'features/settings/presentation/cubit/sport_mode_cubit.dart';
 import 'features/splash/presentation/pages/splash_page.dart';
 
 class FalconIptvApp extends StatefulWidget {
@@ -97,11 +100,20 @@ class _FalconIptvAppState extends State<FalconIptvApp> {
         RepositoryProvider<AppUpdateService>(
           create: (_) => AppUpdateService(Hive.box<dynamic>(HiveBoxes.settings)),
         ),
+        RepositoryProvider<SportModeRepository>(
+          create: (_) => SportModeRepository(Hive.box<dynamic>(HiveBoxes.settings)),
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
           BlocProvider(create: (_) => ProfileCubit(widget.profileRepository)..loadProfiles()),
           BlocProvider(create: (_) => ConnectionCubit(_dio, _xtreamRepository)),
+          BlocProvider(
+            create: (context) => UpdateStatusCubit(context.read<AppUpdateService>())..refresh(),
+          ),
+          BlocProvider(
+            create: (context) => SportModeCubit(context.read<SportModeRepository>()),
+          ),
         ],
         child: MaterialApp(
           title: 'Falcon IPTV',

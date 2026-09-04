@@ -13,6 +13,21 @@ class SeriesDetails {
 
   final PlayableItem series;
   final List<SeriesSeason> seasons;
+
+  List<PlayableItem> get allEpisodes {
+    return <PlayableItem>[
+      for (final SeriesSeason season in seasons) ...season.episodes,
+    ];
+  }
+
+  int episodeOffset(int seasonIndex, int episodeIndex) {
+    int offset = 0;
+    final int lastSeason = seasonIndex.clamp(0, seasons.length);
+    for (int i = 0; i < lastSeason && i < seasons.length; i++) {
+      offset += seasons[i].episodes.length;
+    }
+    return offset + episodeIndex;
+  }
 }
 
 class StreamSubtitle {

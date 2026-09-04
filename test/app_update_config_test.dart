@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:falconiptv/core/update/app_update_config.dart';
+import 'package:falconiptv/core/update/update_status_cubit.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -65,5 +66,11 @@ void main() {
       ),
       'v1.0.1+2',
     );
+  });
+
+  test('açılış rozeti güncel ve güncelleme metinlerini gösterir', () {
+    expect(const UpdateStatusState().title, 'Denetleniyor');
+    expect(const UpdateStatusState(phase: UpdateStatusPhase.current).title, 'Güncelsiniz');
+    expect(const UpdateStatusState(phase: UpdateStatusPhase.available).title, 'Güncelleme var');
   });
 }

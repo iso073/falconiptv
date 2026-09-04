@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/services/tv_toast_service.dart';
@@ -15,6 +16,7 @@ import '../../../profile/data/models/profile_model.dart';
 import '../../../profile/presentation/cubit/profile_cubit.dart';
 import '../../../profile/presentation/pages/profile_selection_page.dart';
 import '../../../settings/data/parental_control_repository.dart';
+import '../../../settings/presentation/cubit/sport_mode_cubit.dart';
 import '../../../settings/presentation/widgets/pin_entry_dialog.dart';
 import '../cubit/connection_cubit.dart';
 
@@ -102,6 +104,40 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  Future<void> _toggleSportMode() async {
+    final SportModeCubit cubit = context.read<SportModeCubit>();
+    if (cubit.state) {
+      await cubit.setEnabled(false);
+      if (!mounted) {
+        return;
+      }
+      TvToastService.show(context, 'Spor modu kapatıldı.');
+      return;
+    }
+
+    final bool confirmed = await showNeonConfirmDialog(
+      context: context,
+      title: 'Spor Modu',
+      message:
+          'Maç günlerinde takılmayı azaltmak için yayın daha uzun tamponlanır. Kanal bir süre geç açılabilir. Açmak istiyor musunuz?',
+      cancelLabel: 'Vazgeç',
+      confirmLabel: 'Aç',
+      confirmColor: AppColors.neonCyan,
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
+    await cubit.setEnabled(true);
+    if (!mounted) {
+      return;
+    }
+    TvToastService.show(
+      context,
+      'Spor modu açıldı. Yeni yayında uzun tampon kullanılır.',
+      type: TvToastType.success,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return TvBackScope(
@@ -115,7 +151,12 @@ class _SettingsPageState extends State<SettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  GlassmorphismBar(
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: AppColors.background.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: GlassmorphismBar(
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
@@ -137,6 +178,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ],
                     ),
+                    ),
                   ),
                   const SizedBox(height: 24),
                   Expanded(
@@ -144,10 +186,11 @@ class _SettingsPageState extends State<SettingsPage> {
                       builder: (context, state) {
                         final ProfileModel? profile =
                             state is ProfileLoaded ? state.activeProfile : null;
-                        return ListView(
-                          clipBehavior: Clip.none,
-                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-                          children: [
+                        return ClipRect(
+                          child: ListView(
+                            clipBehavior: Clip.hardEdge,
+                            padding: const EdgeInsets.only(top: 4, bottom: 8),
+                            children: [
                             _SettingsListCard(
                               glowColor: AppColors.neonCyan,
                               onActivate: () {
@@ -168,7 +211,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                       'Bağlantı Durumu',
                                       style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
                                     ),
-                                    subtitle: Text('${snapshot.title} • ${snapshot.detail}'),
+                                    subtitle: Text(
+                                      '${snapshot.title} • ${snapshot.detail}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   );
                                 },
                               ),
@@ -188,6 +235,8 @@ class _SettingsPageState extends State<SettingsPage> {
                                 ),
                                 subtitle: Text(
                                   profile?.profileName ?? 'Aktif profil atanmadı',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ),
@@ -204,8 +253,43 @@ class _SettingsPageState extends State<SettingsPage> {
                                   'Bağlantı Türü',
                                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
                                 ),
-                                subtitle: Text(_connectionSummary(profile)),
+                                subtitle: Text(
+                                  _connectionSummary(profile),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
+                            ),
+                            BlocBuilder<SportModeCubit, bool>(
+                              builder: (context, sportOn) {
+                                return _SettingsListCard(
+                                  glowColor: AppColors.neonCyan,
+                                  onActivate: _toggleSportMode,
+                                  child: ListTile(
+                                    leading: const Icon(
+                                      Icons.sports_soccer_rounded,
+                                      color: AppColors.neonCyan,
+                                      size: 32,
+                                    ),
+                                    title: const Text(
+                                      'Spor Modu',
+                                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                                    ),
+                                    subtitle: Text(
+                                      sportOn
+                                          ? 'Açık • Maç yayını için uzun tampon'
+                                          : 'Kapalı • Normal tampon kullanılır',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    trailing: Icon(
+                                      sportOn ? Icons.toggle_on_rounded : Icons.toggle_off_outlined,
+                                      color: sportOn ? AppColors.neonCyan : AppColors.textSecondary,
+                                      size: 36,
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                             _SettingsListCard(
                               glowColor: AppColors.neonPurple,
@@ -224,6 +308,8 @@ class _SettingsPageState extends State<SettingsPage> {
                                   _parental.isProtectionEnabled
                                       ? 'Etkin • Yetişkin kategorileri şifre ile korunuyor'
                                       : 'Devre dışı • Yetişkin kategoriler şifresiz açılıyor',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 trailing: Icon(
                                   _parental.isProtectionEnabled
@@ -248,6 +334,8 @@ class _SettingsPageState extends State<SettingsPage> {
                                 ),
                                 subtitle: Text(
                                   'Varsayılan şifre 0000 olarak tanımlanmıştır.',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ),
@@ -272,6 +360,8 @@ class _SettingsPageState extends State<SettingsPage> {
                                 ),
                                 subtitle: Text(
                                   'GitHub üzerinden yeni sürüm aranır. Yüklü sürüm ${AppVersionInfo.current.name}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ),
@@ -303,10 +393,13 @@ class _SettingsPageState extends State<SettingsPage> {
                                 ),
                                 subtitle: Text(
                                   'Aktif profili değiştirmek için profil seçim ekranına dönünüz.',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ),
                           ],
+                          ),
                         );
                       },
                     ),
@@ -331,10 +424,26 @@ class _SettingsPageState extends State<SettingsPage> {
     if (profile == null) {
       return 'Bağlantı bilgisi bulunmamaktadır.';
     }
+    final String raw = profile.type == ProfileType.xtream
+        ? (profile.serverUrl ?? '-')
+        : (profile.m3uUrl ?? '-');
+    final String compact = _compactUrl(raw);
     if (profile.type == ProfileType.xtream) {
-      return 'Xtream Codes API • ${profile.serverUrl ?? '-'}';
+      return 'Xtream Codes API • $compact';
     }
-    return 'M3U Playlist • ${profile.m3uUrl ?? '-'}';
+    return 'M3U Playlist • $compact';
+  }
+
+  String _compactUrl(String raw) {
+    final Uri? uri = Uri.tryParse(raw.trim());
+    if (uri == null || uri.host.isEmpty) {
+      return raw;
+    }
+    final String path = uri.path;
+    if (path.isEmpty || path == '/') {
+      return uri.host;
+    }
+    return '${uri.host}$path';
   }
 }
 
@@ -352,14 +461,70 @@ class _SettingsListCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: NeonFocusCard(
-        glowColor: glowColor,
-        focusedScale: 1.04,
-        unfocusedOpacity: 0.85,
-        onActivate: onActivate,
-        child: child,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: _StableListFocus(
+        child: NeonFocusCard(
+          glowColor: glowColor,
+          focusedScale: 1.0,
+          unfocusedOpacity: 0.85,
+          borderRadius: 26,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          onActivate: onActivate,
+          child: Theme(
+            data: Theme.of(context).copyWith(
+              listTileTheme: const ListTileThemeData(
+                contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                minVerticalPadding: 12,
+                minLeadingWidth: 40,
+                visualDensity: VisualDensity.standard,
+              ),
+            ),
+            child: child,
+          ),
+        ),
       ),
+    );
+  }
+}
+
+class _StableListFocus extends SingleChildRenderObjectWidget {
+  const _StableListFocus({required Widget child}) : super(child: child);
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderStableListFocus();
+}
+
+class _RenderStableListFocus extends RenderProxyBox {
+  @override
+  void showOnScreen({
+    RenderObject? descendant,
+    Rect? rect,
+    Duration duration = Duration.zero,
+    Curve curve = Curves.ease,
+  }) {
+    final RenderObject? viewport = RenderAbstractViewport.maybeOf(this);
+    final RenderObject? target = descendant ?? child;
+    if (viewport is! RenderBox || target is! RenderBox || !viewport.hasSize || !target.hasSize) {
+      super.showOnScreen(
+        descendant: descendant,
+        rect: rect,
+        duration: duration,
+        curve: curve,
+      );
+      return;
+    }
+    final RenderBox viewBox = viewport;
+    final RenderBox itemBox = target;
+    final Rect view = viewBox.localToGlobal(Offset.zero) & viewBox.size;
+    final Rect item = itemBox.localToGlobal(Offset.zero) & itemBox.size;
+    if (item.top >= view.top && item.bottom <= view.bottom) {
+      return;
+    }
+    super.showOnScreen(
+      descendant: descendant,
+      rect: rect,
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
     );
   }
 }

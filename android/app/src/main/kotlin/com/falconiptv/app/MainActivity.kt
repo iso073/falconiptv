@@ -19,6 +19,7 @@ import java.io.File
 class MainActivity : FlutterActivity() {
     private val keepAliveHandler = Handler(Looper.getMainLooper())
     private var keepScreenAwake = false
+    private var sportMode = false
 
     private val keepAliveTick = object : Runnable {
         override fun run() {
@@ -36,17 +37,31 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "falconiptv/exoplayer")
             .setMethodCallHandler { call, result ->
-                if (call.method == "bufferConfig") {
-                    result.success(
-                        mapOf(
-                            "minBufferMs" to 15000,
-                            "maxBufferMs" to 50000,
-                            "bufferForPlaybackMs" to 2500,
-                            "bufferForPlaybackAfterRebufferMs" to 5000,
-                        ),
-                    )
-                } else {
-                    result.notImplemented()
+                when (call.method) {
+                    "setSportMode" -> {
+                        sportMode = call.arguments as? Boolean == true
+                        result.success(null)
+                    }
+                    "bufferConfig" -> {
+                        result.success(
+                            if (sportMode) {
+                                mapOf(
+                                    "minBufferMs" to 30000,
+                                    "maxBufferMs" to 70000,
+                                    "bufferForPlaybackMs" to 8000,
+                                    "bufferForPlaybackAfterRebufferMs" to 12000,
+                                )
+                            } else {
+                                mapOf(
+                                    "minBufferMs" to 15000,
+                                    "maxBufferMs" to 50000,
+                                    "bufferForPlaybackMs" to 2500,
+                                    "bufferForPlaybackAfterRebufferMs" to 5000,
+                                )
+                            },
+                        )
+                    }
+                    else -> result.notImplemented()
                 }
             }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "falconiptv/display")

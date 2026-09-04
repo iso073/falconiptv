@@ -38,6 +38,19 @@ class ProfileCubit extends Cubit<ProfileState> {
     }
   }
 
+  Future<void> updateProfile(ProfileModel profile) async {
+    try {
+      await _repository.update(profile);
+      await loadProfiles();
+    } catch (_) {
+      emit(
+        const ProfileError(
+          'Profil güncellenemedi. Lütfen bilgilerinizi kontrol ediniz.',
+        ),
+      );
+    }
+  }
+
   Future<void> deleteProfile(String id) async {
     try {
       await _repository.delete(id);
