@@ -15,6 +15,23 @@ void main() {
     const AppVersionInfo current = AppVersionInfo(name: '1.0.0', code: 1);
     expect(AppVersionInfo.parse('v1.0.1+2').isNewerThan(current), isTrue);
     expect(AppVersionInfo.parse('v1.0.0+1').isNewerThan(current), isFalse);
+    expect(
+      AppVersionInfo.parse('v1.0.5+6').isNewerThan(const AppVersionInfo(name: '1.0.4', code: 5)),
+      isTrue,
+    );
+  });
+
+  test('GitHub HTML ve etiket adresinden sürüm okunur', () {
+    expect(
+      AppUpdateConfig.tagFromHtml(
+        '<a href="/iso073/falconiptv/releases/tag/v1.0.5%2B6">1.0.5</a>',
+      ),
+      'v1.0.5+6',
+    );
+    expect(
+      AppUpdateConfig.apkUrlForTag('v1.0.5+6'),
+      'https://github.com/iso073/falconiptv/releases/download/v1.0.5%2B6/falconiptv.apk',
+    );
   });
 
   test('GitHub sürüm JSON içinden APK adresi seçilir', () {
@@ -70,7 +87,7 @@ void main() {
 
   test('açılış rozeti güncel ve güncelleme metinlerini gösterir', () {
     expect(const UpdateStatusState().title, 'Denetleniyor');
-    expect(const UpdateStatusState(phase: UpdateStatusPhase.current).title, 'Güncelsiniz');
+    expect(const UpdateStatusState(phase: UpdateStatusPhase.current).title, 'Güncel ${AppVersionInfo.current.name}');
     expect(const UpdateStatusState(phase: UpdateStatusPhase.available).title, 'Güncelleme var');
   });
 }

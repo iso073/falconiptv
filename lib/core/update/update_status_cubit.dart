@@ -16,8 +16,9 @@ class UpdateStatusState {
 
   String get title => switch (phase) {
         UpdateStatusPhase.checking => 'Denetleniyor',
-        UpdateStatusPhase.current => 'Güncelsiniz',
-        UpdateStatusPhase.available => 'Güncelleme var',
+        UpdateStatusPhase.current => 'Güncel ${AppVersionInfo.current.name}',
+        UpdateStatusPhase.available =>
+          release == null ? 'Güncelleme var' : '${release!.version.name} var',
         UpdateStatusPhase.failed => 'Denetlenemedi',
       };
 }
@@ -30,11 +31,16 @@ class UpdateStatusCubit extends Cubit<UpdateStatusState> {
   Future<void> refresh() async {
     emit(const UpdateStatusState());
     try {
-      final GithubReleaseInfo? update = await _service.availableUpdate();
+      final GithubReleaseInfo? latest = await _service.fetchLatest();
+      if (latest == null) {
+        emit(const UpdateStatusState(phase: UpdateStatusPhase.failed));
+        return;
+      }
+      final bool newer = latest.version.isNewerThan(AppVersionInfo.current);
       emit(
         UpdateStatusState(
-          phase: update == null ? UpdateStatusPhase.current : UpdateStatusPhase.available,
-          release: update,
+          phase: newer ? UpdateStatusPhase.available : UpdateStatusPhase.current,
+          release: latest,
         ),
       );
     } catch (_) {

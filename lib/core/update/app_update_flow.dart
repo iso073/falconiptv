@@ -18,21 +18,25 @@ abstract final class AppUpdateFlow {
       return;
     }
     try {
-      final GithubReleaseInfo? update = await service.availableUpdate();
+      final GithubReleaseInfo? latest = await service.fetchLatest();
       await service.markChecked();
       if (!context.mounted) {
         return;
       }
-      if (update == null) {
+      if (latest == null) {
+        throw StateError('GitHub sürümü okunamadı.');
+      }
+      if (!latest.version.isNewerThan(AppVersionInfo.current)) {
         if (force) {
           TvToastService.show(
             context,
-            'Uygulama güncel. Sürüm ${AppVersionInfo.current.name}',
+            'Yüklü ${AppVersionInfo.current.name}. GitHub ${latest.version.name}.',
             type: TvToastType.success,
           );
         }
         return;
       }
+      final GithubReleaseInfo update = latest;
       final bool install = await showNeonConfirmDialog(
         context: context,
         title: 'Yeni Sürüm',

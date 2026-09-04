@@ -7,20 +7,23 @@ abstract final class AppUpdateConfig {
   static const String apkAssetName = 'falconiptv.apk';
 
   /// pubspec.yaml `version` ile aynı tutulmalıdır.
-  static const String currentName = '1.0.5';
-  static const int currentCode = 6;
+  static const String currentName = '1.0.6';
+  static const int currentCode = 7;
 
-  static const Duration checkInterval = Duration(hours: 12);
+  static const Duration checkInterval = Duration.zero;
 
   static String get latestApiUrl =>
       'https://api.github.com/repos/$githubOwner/$githubRepo/releases/latest';
+
+  static String get releasesApiUrl =>
+      'https://api.github.com/repos/$githubOwner/$githubRepo/releases?per_page=10';
 
   static String get latestPageUrl =>
       'https://github.com/$githubOwner/$githubRepo/releases/latest';
 
   static String apkUrlForTag(String tag) {
     final String safeTag = tag.startsWith('v') || tag.startsWith('V') ? tag : 'v$tag';
-    return 'https://github.com/$githubOwner/$githubRepo/releases/download/$safeTag/$apkAssetName';
+    return 'https://github.com/$githubOwner/$githubRepo/releases/download/${Uri.encodeComponent(safeTag)}/$apkAssetName';
   }
 
   static String? tagFromReleaseUrl(String location) {
@@ -31,6 +34,14 @@ abstract final class AppUpdateConfig {
     }
     return Uri.decodeComponent(parts[tagIndex + 1].split('?').first);
   }
+
+  static String? tagFromHtml(String html) {
+    final Match? match = RegExp(r'/releases/tag/([vV]?[0-9][^"\s?<]+)').firstMatch(html);
+    if (match == null) {
+      return null;
+    }
+    return Uri.decodeComponent(match.group(1)!);
+  }
 }
 
 class AppVersionInfo {
@@ -40,7 +51,7 @@ class AppVersionInfo {
   final int code;
   final String tag;
 
-  static const AppVersionInfo current = AppVersionInfo(
+  static AppVersionInfo current = const AppVersionInfo(
     name: AppUpdateConfig.currentName,
     code: AppUpdateConfig.currentCode,
   );
@@ -59,10 +70,11 @@ class AppVersionInfo {
   }
 
   bool isNewerThan(AppVersionInfo other) {
-    if (code != other.code) {
-      return code > other.code;
+    final int names = _compareNames(name, other.name);
+    if (names != 0) {
+      return names > 0;
     }
-    return _compareNames(name, other.name) > 0;
+    return code > other.code;
   }
 
   static int _codeFromName(String name) {

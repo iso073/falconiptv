@@ -2,10 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/device/app_layout.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/update/app_update_config.dart';
 import '../../../../core/widgets/falcon_logo.dart';
 import '../../../profile/presentation/pages/profile_selection_page.dart';
-import '../../../../core/device/app_layout.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -67,9 +68,9 @@ class _SplashPageState extends State<SplashPage> {
               children: [
                 FalconLogo(height: AppLayout.splashLogo(context), glow: true),
                 const SizedBox(height: 18),
-                const Text(
-                  'Sisteme Hoş Geldiniz',
-                  style: TextStyle(fontSize: 18, color: AppColors.textSecondary),
+                Text(
+                  'Sürüm ${AppVersionInfo.current.name}',
+                  style: const TextStyle(fontSize: 22, color: AppColors.textSecondary, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 36),
                 const SizedBox(

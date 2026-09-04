@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -5,16 +6,30 @@ import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
 
 import '../constants/hive_boxes.dart';
-import '../network/iptv_dio_client.dart';
 import 'app_update_config.dart';
 
 class AppUpdateService {
-  AppUpdateService(this._settingsBox, {Dio? dio}) : _dio = dio ?? IptvDioClient.create();
+  AppUpdateService(this._settingsBox, {Dio? dio}) : _dio = dio ?? _createGithubDio();
 
   final Box<dynamic> _settingsBox;
   final Dio _dio;
 
   static const MethodChannel _channel = MethodChannel('falconiptv/update');
+
+  static Dio _createGithubDio() {
+    return Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 25),
+        sendTimeout: const Duration(seconds: 15),
+        followRedirects: true,
+        headers: const <String, String>{
+          'User-Agent': 'FalconIPTV',
+          'Accept': 'application/vnd.github+json',
+        },
+      ),
+    );
+  }
 
   bool get shouldAutoCheck {
     final Object? raw = _settingsBox.get(HiveBoxes.lastUpdateCheckKey);
@@ -30,15 +45,39 @@ class AppUpdateService {
   }
 
   Future<GithubReleaseInfo?> fetchLatest() async {
+    Object? lastError;
     try {
-      return await _fetchFromApi();
-    } catch (_) {
-      return _fetchFromReleasesPage();
+      final GithubReleaseInfo? fromLatest = await _fetchFromApi(AppUpdateConfig.latestApiUrl);
+      if (fromLatest != null) {
+        return fromLatest;
+      }
+    } catch (error) {
+      lastError = error;
     }
+    try {
+      final GithubReleaseInfo? fromList = await _fetchNewestFromList();
+      if (fromList != null) {
+        return fromList;
+      }
+    } catch (error) {
+      lastError = error;
+    }
+    try {
+      final GithubReleaseInfo? fromPage = await _fetchFromReleasesPage();
+      if (fromPage != null) {
+        return fromPage;
+      }
+    } catch (error) {
+      lastError = error;
+    }
+    if (lastError != null) {
+      throw lastError;
+    }
+    return null;
   }
 
-  Future<GithubReleaseInfo?> _fetchFromApi() async {
-    final Response<dynamic> response = await _dio.get<dynamic>(AppUpdateConfig.latestApiUrl);
+  Future<GithubReleaseInfo?> _fetchFromApi(String url) async {
+    final Response<dynamic> response = await _dio.get<dynamic>(url);
     if (response.statusCode == 404) {
       return null;
     }
@@ -49,7 +88,82 @@ class AppUpdateService {
         message: 'GitHub sürüm bilgisi alınamadı.',
       );
     }
-    final Object? data = response.data;
+    return _releaseFromData(response.data);
+  }
+
+  Future<GithubReleaseInfo?> _fetchNewestFromList() async {
+    final Response<dynamic> response = await _dio.get<dynamic>(AppUpdateConfig.releasesApiUrl);
+    if ((response.statusCode ?? 0) < 200 || (response.statusCode ?? 0) >= 300) {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        message: 'GitHub sürüm listesi alınamadı.',
+      );
+    }
+    final Object? data = _decodeData(response.data);
+    if (data is! List) {
+      return null;
+    }
+    GithubReleaseInfo? newest;
+    for (final Object? item in data) {
+      if (item is! Map) {
+        continue;
+      }
+      if (item['draft'] == true || item['prerelease'] == true) {
+        continue;
+      }
+      final GithubReleaseInfo? release = GithubReleaseInfo.fromJson(
+        Map<String, dynamic>.from(item),
+        preferredAsset: AppUpdateConfig.apkAssetName,
+      );
+      if (release == null) {
+        continue;
+      }
+      if (newest == null || release.version.isNewerThan(newest.version)) {
+        newest = release;
+      }
+    }
+    return newest;
+  }
+
+  Future<GithubReleaseInfo?> _fetchFromReleasesPage() async {
+    final Response<dynamic> response = await _dio.get<dynamic>(
+      AppUpdateConfig.latestPageUrl,
+      options: Options(
+        headers: const <String, String>{
+          'User-Agent': 'FalconIPTV',
+          'Accept': 'text/html',
+        },
+        followRedirects: true,
+        validateStatus: (int? status) =>
+            status != null && (status < 400 || status == 301 || status == 302 || status == 303),
+      ),
+    );
+    if (response.statusCode == 404) {
+      return null;
+    }
+    final String location = response.realUri.toString();
+    String? tag = AppUpdateConfig.tagFromReleaseUrl(location);
+    tag ??= AppUpdateConfig.tagFromReleaseUrl(response.headers.value('location') ?? '');
+    if (tag == null || tag.isEmpty) {
+      final Object? body = response.data;
+      if (body is String) {
+        tag = AppUpdateConfig.tagFromHtml(body);
+      }
+    }
+    if (tag == null || tag.isEmpty) {
+      return null;
+    }
+    final String apkUrl = AppUpdateConfig.apkUrlForTag(tag);
+    return GithubReleaseInfo(
+      tag: tag,
+      version: AppVersionInfo.parse(tag),
+      apkUrl: apkUrl,
+    );
+  }
+
+  GithubReleaseInfo? _releaseFromData(Object? raw) {
+    final Object? data = _decodeData(raw);
     if (data is! Map) {
       return null;
     }
@@ -63,45 +177,15 @@ class AppUpdateService {
     );
   }
 
-  Future<GithubReleaseInfo?> _fetchFromReleasesPage() async {
-    final Response<dynamic> response = await _dio.get<dynamic>(
-      AppUpdateConfig.latestPageUrl,
-      options: Options(
-        followRedirects: false,
-        validateStatus: (int? status) =>
-            status != null && (status < 400 || status == 301 || status == 302 || status == 303),
-      ),
-    );
-    if (response.statusCode == 404) {
-      return null;
+  Object? _decodeData(Object? raw) {
+    if (raw is String && raw.trim().isNotEmpty) {
+      try {
+        return jsonDecode(raw);
+      } catch (_) {
+        return raw;
+      }
     }
-    final String location = response.headers.value('location') ?? response.realUri.toString();
-    final String? tag = AppUpdateConfig.tagFromReleaseUrl(location);
-    if (tag == null || tag.isEmpty) {
-      return null;
-    }
-    final String apkUrl = AppUpdateConfig.apkUrlForTag(tag);
-    return GithubReleaseInfo(
-      tag: tag,
-      version: AppVersionInfo.parse(tag),
-      apkUrl: apkUrl,
-      apkSize: await _remoteApkSize(apkUrl),
-    );
-  }
-
-  Future<int> _remoteApkSize(String url) async {
-    try {
-      final Response<dynamic> response = await _dio.head<dynamic>(
-        url,
-        options: Options(
-          followRedirects: true,
-          validateStatus: (int? status) => status != null && status < 400,
-        ),
-      );
-      return int.tryParse(response.headers.value('content-length') ?? '') ?? 0;
-    } catch (_) {
-      return 0;
-    }
+    return raw;
   }
 
   Future<GithubReleaseInfo?> availableUpdate() async {

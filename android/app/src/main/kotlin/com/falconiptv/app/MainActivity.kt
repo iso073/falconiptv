@@ -85,6 +85,7 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "falconiptv/update")
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "getInstalledVersion" -> result.success(installedVersion())
                     "getCacheDir" -> result.success(cacheDir.absolutePath)
                     "canInstall" -> result.success(canInstallPackages())
                     "openInstallPermission" -> {
@@ -145,6 +146,25 @@ class MainActivity : FlutterActivity() {
             "fireTv" to fireTv,
             "watch" to watch,
             "automotive" to automotive,
+        )
+    }
+
+    private fun installedVersion(): Map<String, Any> {
+        val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
+        } else {
+            @Suppress("DEPRECATION")
+            packageManager.getPackageInfo(packageName, 0)
+        }
+        val code = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            info.longVersionCode.toInt()
+        } else {
+            @Suppress("DEPRECATION")
+            info.versionCode
+        }
+        return mapOf(
+            "name" to (info.versionName ?: "0.0.0"),
+            "code" to code,
         )
     }
 
