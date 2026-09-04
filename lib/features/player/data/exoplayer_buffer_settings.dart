@@ -20,10 +20,11 @@ class ExoPlayerBufferSettings {
   static const ExoPlayerBufferSettings standard = ExoPlayerBufferSettings(
     minBufferMs: 15000,
     maxBufferMs: 50000,
-    bufferForPlaybackMs: 2500,
+    bufferForPlaybackMs: 2000,
     bufferForPlaybackAfterRebufferMs: 5000,
     maxReconnectAttempts: 3,
-    readyWait: Duration(seconds: 8),
+    readyWait: Duration(seconds: 2),
+    minHold: Duration(seconds: 2),
   );
 
   /// Hedef depo 30 sn; açılış 8–12 sn bekler, 30 sn kilitlemez.

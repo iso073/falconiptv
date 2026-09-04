@@ -226,10 +226,12 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
         await _releaseController(next);
         return;
       }
-      await _waitForBuffer(next, buffer);
-      if (_stopped || !mounted) {
-        await _releaseController(next);
-        return;
+      if (buffer.minHold > Duration.zero) {
+        await _waitForBuffer(next, buffer);
+        if (_stopped || !mounted) {
+          await _releaseController(next);
+          return;
+        }
       }
       next.addListener(_onPlayerUpdate);
       await next.play();

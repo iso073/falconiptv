@@ -55,7 +55,7 @@ class MainActivity : FlutterActivity() {
                                 mapOf(
                                     "minBufferMs" to 15000,
                                     "maxBufferMs" to 50000,
-                                    "bufferForPlaybackMs" to 2500,
+                                    "bufferForPlaybackMs" to 2000,
                                     "bufferForPlaybackAfterRebufferMs" to 5000,
                                 )
                             },

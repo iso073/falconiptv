@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/update/app_update_flow.dart';
 import '../../../../core/update/app_update_service.dart';
 import '../../../../core/update/app_update_status_badge.dart';
+import '../../../settings/presentation/cubit/sport_mode_cubit.dart';
 import '../../../settings/presentation/widgets/sport_mode_status_badge.dart';
 import '../../../../core/widgets/exit_confirm_dialog.dart';
 import '../../../../core/widgets/falcon_logo.dart';
@@ -264,12 +265,43 @@ class _XCIPTVHomePageState extends State<XCIPTVHomePage> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 10),
+                  const SizedBox(width: double.infinity, child: _SportModeHint()),
                 ],
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SportModeHint extends StatelessWidget {
+  const _SportModeHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<SportModeCubit, bool>(
+      builder: (context, sportOn) {
+        if (sportOn) {
+          return const SizedBox.shrink();
+        }
+        return const Row(
+          children: [
+            Icon(Icons.info_outline_rounded, size: 16, color: AppColors.textSecondary),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Maç günlerinde Ayarlar’dan Spor Modu’nu açınız. Yayın daha stabil izlenir.',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

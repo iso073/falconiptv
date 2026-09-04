@@ -5,7 +5,9 @@ void main() {
   test('spor modu kapalıyken mevcut tampon kullanılır', () {
     final ExoPlayerBufferSettings settings = ExoPlayerBufferSettings.current(sportMode: false);
     expect(settings.minBufferMs, 15000);
-    expect(settings.bufferForPlaybackMs, 2500);
+    expect(settings.bufferForPlaybackMs, 2000);
+    expect(settings.minHold, const Duration(seconds: 2));
+    expect(settings.readyWait, const Duration(seconds: 2));
     expect(settings.maxReconnectAttempts, 3);
   });
 
