@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/services/tv_toast_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/device/app_layout.dart';
+import '../../../../core/device/form_factor.dart';
 import '../../../../core/update/app_update_status_badge.dart';
 import '../../../settings/presentation/widgets/sport_mode_status_badge.dart';
 import '../../../../core/widgets/exit_confirm_dialog.dart';
@@ -70,19 +72,20 @@ class ProfileSelectionPage extends StatelessWidget {
           decoration: BoxDecoration(gradient: AppColors.ambientGlow),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 28),
+              padding: AppLayout.pagePadding(context),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   GlassmorphismBar(
                     child: Row(
                       children: [
-                        const FalconLogo(height: 52, glow: true),
+                        FalconLogo(height: AppLayout.headerLogo(context), glow: true),
                         const SportModeStatusBadge(),
                         const SizedBox(width: 16),
                         Text(
                           'Profil Seçimi',
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontSize: FormFactor.isPhoneOf(context) ? 18 : null,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 0.4,
                               ),
@@ -92,7 +95,7 @@ class ProfileSelectionPage extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: FormFactor.isPhoneOf(context) ? 8 : 24),
                   Expanded(
                     child: BlocConsumer<ProfileCubit, ProfileState>(
                       listener: (context, state) {
@@ -119,25 +122,34 @@ class ProfileSelectionPage extends StatelessWidget {
                           );
                         }
                         final ProfileLoaded loaded = state as ProfileLoaded;
-                        final int itemCount = loaded.profiles.length + 2;
+                        final bool phone = FormFactor.isPhoneOf(context);
+                        final int itemCount = loaded.profiles.length + (phone ? 1 : 2);
+                        final double cardWidth = AppLayout.profileCardWidth(context);
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               loaded.profiles.isEmpty
-                                  ? 'Kayıtlı profil bulunmamaktadır. Kumanda ile veya telefondaki karekod ile yeni profil ekleyiniz.'
+                                  ? (phone
+                                      ? 'Kayıtlı profil bulunmamaktadır. Yeni profil ekleyiniz.'
+                                      : 'Kayıtlı profil bulunmamaktadır. Kumanda ile veya telefondaki karekod ile yeni profil ekleyiniz.')
                                   : 'Kullanmak istediğiniz yayın profilini seçiniz.',
-                              style: const TextStyle(
-                                fontSize: 19,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: phone ? 14 : 19,
                                 color: AppColors.textSecondary,
                               ),
                             ),
-                            const SizedBox(height: 18),
+                            SizedBox(height: phone ? 8 : 18),
                             Expanded(
                               child: ListView.separated(
                                 clipBehavior: Clip.none,
                                 scrollDirection: Axis.horizontal,
-                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                                padding: EdgeInsets.symmetric(
+                                  vertical: phone ? 4 : 12,
+                                  horizontal: phone ? 4 : 8,
+                                ),
                                 itemCount: itemCount,
                                 separatorBuilder: (context, index) => const SizedBox(width: 22),
                                 itemBuilder: (context, index) {
@@ -145,69 +157,47 @@ class ProfileSelectionPage extends StatelessWidget {
                                   final bool isQrCard = index == loaded.profiles.length + 1;
                                   if (isAddCard) {
                                     return SizedBox(
-                                      width: 230,
+                                      width: cardWidth,
                                       child: Column(
                                         children: [
                                           Expanded(
                                             child: NeonFocusCard(
                                               autofocus: loaded.profiles.isEmpty,
                                               glowColor: AppColors.neonPurple,
+                                              padding: phone
+                                                  ? const EdgeInsets.all(10)
+                                                  : const EdgeInsets.all(18),
                                               onActivate: () => _openAddProfile(context),
-                                              child: const Column(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  Icon(
-                                                    Icons.add_circle_outline,
-                                                    size: 52,
-                                                    color: AppColors.neonPurple,
-                                                  ),
-                                                  SizedBox(height: 14),
-                                                  Text(
-                                                    '+ Yeni Profil Ekle',
-                                                    textAlign: TextAlign.center,
-                                                    style: TextStyle(
-                                                      fontSize: 20,
-                                                      fontWeight: FontWeight.w800,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
+                                              child: phone
+                                                  ? FittedBox(
+                                                      fit: BoxFit.scaleDown,
+                                                      child: _AddProfileCardBody(compact: true),
+                                                    )
+                                                  : const _AddProfileCardBody(compact: false),
                                             ),
                                           ),
-                                          const SizedBox(height: 10),
-                                          const SizedBox(height: 46),
+                                          SizedBox(height: phone ? 6 : 10),
+                                          SizedBox(height: phone ? 36 : 46),
                                         ],
                                       ),
                                     );
                                   }
                                   if (isQrCard) {
+                                    if (phone) {
+                                      return const SizedBox.shrink();
+                                    }
                                     return SizedBox(
-                                      width: 230,
+                                      width: cardWidth,
                                       child: Column(
                                         children: [
                                           Expanded(
                                             child: NeonFocusCard(
                                               glowColor: AppColors.neonCyan,
+                                              padding: phone
+                                                  ? const EdgeInsets.all(10)
+                                                  : const EdgeInsets.all(18),
                                               onActivate: () => _openQrProfile(context),
-                                              child: const Column(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  Icon(
-                                                    Icons.qr_code_2_rounded,
-                                                    size: 52,
-                                                    color: AppColors.neonCyan,
-                                                  ),
-                                                  SizedBox(height: 14),
-                                                  Text(
-                                                    'Telefondan Ekle',
-                                                    textAlign: TextAlign.center,
-                                                    style: TextStyle(
-                                                      fontSize: 20,
-                                                      fontWeight: FontWeight.w800,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
+                                              child: const _QrProfileCardBody(),
                                             ),
                                           ),
                                           const SizedBox(height: 10),
@@ -220,7 +210,7 @@ class ProfileSelectionPage extends StatelessWidget {
                                   final ProfileModel profile = loaded.profiles[index];
                                   final bool isXtream = profile.type == ProfileType.xtream;
                                   return SizedBox(
-                                    width: 230,
+                                    width: cardWidth,
                                     child: Column(
                                       children: [
                                         Expanded(
@@ -229,63 +219,33 @@ class ProfileSelectionPage extends StatelessWidget {
                                             glowColor: isXtream
                                                 ? AppColors.neonCyan
                                                 : AppColors.neonPurple,
+                                            padding: phone
+                                                ? const EdgeInsets.all(10)
+                                                : const EdgeInsets.all(18),
                                             onActivate: () => navigateToHome(context, profile),
                                             onLongPress: () =>
                                                 _openAddProfile(context, existing: profile),
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Align(
-                                                  alignment: Alignment.topRight,
-                                                  child: _TypeBadge(type: profile.type),
-                                                ),
-                                                const Spacer(),
-                                                CircleAvatar(
-                                                  radius: 24,
-                                                  backgroundColor: (isXtream
-                                                          ? AppColors.neonCyan
-                                                          : AppColors.neonPurple)
-                                                      .withValues(alpha: 0.18),
-                                                  child: Icon(
-                                                    isXtream
-                                                        ? Icons.cloud_outlined
-                                                        : Icons.playlist_play,
-                                                    color: isXtream
-                                                        ? AppColors.neonCyan
-                                                        : AppColors.neonPurple,
+                                            child: phone
+                                                ? FittedBox(
+                                                    fit: BoxFit.scaleDown,
+                                                    alignment: Alignment.centerLeft,
+                                                    child: SizedBox(
+                                                      width: cardWidth - 28,
+                                                      child: _ProfileCardBody(
+                                                        profile: profile,
+                                                        compact: true,
+                                                      ),
+                                                    ),
+                                                  )
+                                                : _ProfileCardBody(
+                                                    profile: profile,
+                                                    compact: false,
                                                   ),
-                                                ),
-                                                const SizedBox(height: 12),
-                                                Text(
-                                                  profile.profileName,
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: const TextStyle(
-                                                    fontSize: 21,
-                                                    fontWeight: FontWeight.w800,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 6),
-                                                Text(
-                                                  isXtream
-                                                      ? (profile.serverUrl ??
-                                                          'Xtream Codes bağlantısı')
-                                                      : 'M3U oynatma listesi',
-                                                  maxLines: 2,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: const TextStyle(
-                                                    color: AppColors.textSecondary,
-                                                    fontSize: 13,
-                                                    height: 1.25,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
                                           ),
                                         ),
-                                        const SizedBox(height: 20),
+                                        SizedBox(height: phone ? 8 : 20),
                                         SizedBox(
-                                          height: 46,
+                                          height: phone ? 36 : 46,
                                           child: NeonFocusCard(
                                             padding: EdgeInsets.zero,
                                             borderRadius: 14,
@@ -322,10 +282,17 @@ class ProfileSelectionPage extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            const Text(
-                              'Düzenlemek veya silmek için kartın altındaki "Düzenle" düğmesine '
-                              'ilerleyiniz. Kart üzerinde OK tuşunu basılı tutmak da düzenlemeyi açar.',
-                              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                            Text(
+                              phone
+                                  ? 'Düzenlemek için kartın altındaki Düzenle düğmesine basınız.'
+                                  : 'Düzenlemek veya silmek için kartın altındaki "Düzenle" düğmesine '
+                                      'ilerleyiniz. Kart üzerinde OK tuşunu basılı tutmak da düzenlemeyi açar.',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: phone ? 12 : 14,
+                                color: AppColors.textSecondary,
+                              ),
                             ),
                           ],
                         );
@@ -338,6 +305,115 @@ class ProfileSelectionPage extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _AddProfileCardBody extends StatelessWidget {
+  const _AddProfileCardBody({required this.compact});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
+      children: [
+        Icon(
+          Icons.add_circle_outline,
+          size: compact ? 36 : 52,
+          color: AppColors.neonPurple,
+        ),
+        SizedBox(height: compact ? 8 : 14),
+        Text(
+          '+ Yeni Profil Ekle',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: compact ? 16 : 20,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QrProfileCardBody extends StatelessWidget {
+  const _QrProfileCardBody();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.qr_code_2_rounded,
+          size: 52,
+          color: AppColors.neonCyan,
+        ),
+        SizedBox(height: 14),
+        Text(
+          'Telefondan Ekle',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProfileCardBody extends StatelessWidget {
+  const _ProfileCardBody({required this.profile, required this.compact});
+
+  final ProfileModel profile;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isXtream = profile.type == ProfileType.xtream;
+    final Color color = isXtream ? AppColors.neonCyan : AppColors.neonPurple;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Align(
+          alignment: Alignment.topRight,
+          child: _TypeBadge(type: profile.type),
+        ),
+        if (compact) const SizedBox(height: 8) else const Spacer(),
+        CircleAvatar(
+          radius: compact ? 18 : 24,
+          backgroundColor: color.withValues(alpha: 0.18),
+          child: Icon(
+            isXtream ? Icons.cloud_outlined : Icons.playlist_play,
+            color: color,
+          ),
+        ),
+        SizedBox(height: compact ? 8 : 12),
+        Text(
+          profile.profileName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: compact ? 16 : 21,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        SizedBox(height: compact ? 4 : 6),
+        Text(
+          isXtream ? (profile.serverUrl ?? 'Xtream Codes bağlantısı') : 'M3U oynatma listesi',
+          maxLines: compact ? 1 : 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+            height: 1.25,
+          ),
+        ),
+      ],
     );
   }
 }

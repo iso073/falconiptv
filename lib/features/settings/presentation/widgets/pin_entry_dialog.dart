@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/device/form_factor.dart';
 import '../../../../core/widgets/neon_focus_card.dart';
 import '../../data/parental_control_repository.dart';
 
@@ -29,7 +30,9 @@ class _PinEntryDialog extends StatefulWidget {
 
 class _PinEntryDialogState extends State<_PinEntryDialog> {
   // The dialog can be opened by a held OK press; ignore that same press.
-  final DateTime _acceptingFrom = DateTime.now().add(const Duration(milliseconds: 600));
+  final DateTime _acceptingFrom = FormFactor.isPhone
+      ? DateTime.now()
+      : DateTime.now().add(const Duration(milliseconds: 600));
 
   String _entry = '';
 

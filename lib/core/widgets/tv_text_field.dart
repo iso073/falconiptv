@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../device/form_factor.dart';
 import '../theme/app_colors.dart';
 
 class TvTextField extends StatefulWidget {
@@ -14,6 +15,7 @@ class TvTextField extends StatefulWidget {
     this.autofocus = false,
     this.focusNode,
     this.onSubmitted,
+    this.onChanged,
   });
 
   final String label;
@@ -24,6 +26,7 @@ class TvTextField extends StatefulWidget {
   final bool autofocus;
   final FocusNode? focusNode;
   final ValueChanged<String>? onSubmitted;
+  final ValueChanged<String>? onChanged;
 
   @override
   State<TvTextField> createState() => _TvTextFieldState();
@@ -120,6 +123,8 @@ class _TvTextFieldState extends State<TvTextField> {
 
   @override
   Widget build(BuildContext context) {
+    final bool phone = FormFactor.isPhoneOf(context);
+    final bool editing = phone || _editing;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
       decoration: BoxDecoration(
@@ -137,23 +142,31 @@ class _TvTextFieldState extends State<TvTextField> {
         focusNode: _focusNode,
         controller: widget.controller,
         autofocus: widget.autofocus,
-        readOnly: !_editing,
-        showCursor: _editing,
-        enableInteractiveSelection: _editing,
+        readOnly: phone ? false : !_editing,
+        showCursor: editing,
+        enableInteractiveSelection: editing,
         obscureText: widget.obscureText,
-        keyboardType: _editing ? widget.keyboardType : TextInputType.none,
+        keyboardType: editing ? widget.keyboardType : TextInputType.none,
         textInputAction: widget.textInputAction,
         onTap: _beginEdit,
-        onEditingComplete: () {},
+        onChanged: widget.onChanged,
+        onEditingComplete: phone
+            ? null
+            : () {},
         onSubmitted: (String value) {
-          _endEdit();
+          if (phone) {
+            _focusNode.unfocus();
+            SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+          } else {
+            _endEdit();
+          }
           if (widget.onSubmitted != null) {
             widget.onSubmitted!(value);
             return;
           }
           FocusScope.of(context).nextFocus();
         },
-        style: const TextStyle(fontSize: 20, color: AppColors.textPrimary),
+        style: TextStyle(fontSize: phone ? 16 : 20, color: AppColors.textPrimary),
         cursorColor: AppColors.neonCyan,
         decoration: InputDecoration(
           labelText: widget.label,

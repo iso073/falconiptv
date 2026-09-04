@@ -10,6 +10,8 @@ import '../../../../core/network/iptv_dio_client.dart';
 import '../../../../core/playback/playback_keep_awake.dart';
 import '../../../../core/services/tv_toast_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/device/app_layout.dart';
+import '../../../../core/device/form_factor.dart';
 import '../../../../core/widgets/exit_confirm_dialog.dart';
 import '../../../../core/widgets/neon_focus_card.dart';
 import '../../../../core/widgets/tv_back_scope.dart';
@@ -568,6 +570,48 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
     _scheduleOsdHide();
   }
 
+  void _onSurfaceTap() {
+    if (_channelListVisible || _tracksVisible) {
+      return;
+    }
+    if (_osdVisible) {
+      _osdTimer?.cancel();
+      setState(() => _osdVisible = false);
+      return;
+    }
+    _showOsd();
+  }
+
+  void _seekTo(Duration target) {
+    final VideoPlayerController? controller = _controller;
+    if (controller == null || !controller.value.isInitialized) {
+      return;
+    }
+    final Duration duration = controller.value.duration;
+    if (duration <= Duration.zero) {
+      return;
+    }
+    final Duration clamped = Duration(
+      milliseconds: target.inMilliseconds.clamp(0, duration.inMilliseconds),
+    );
+    setState(() => _pendingSeek = clamped);
+    _showOsd();
+    _seekTimer?.cancel();
+    _seekTimer = Timer(const Duration(milliseconds: 200), () async {
+      final Duration? pending = _pendingSeek;
+      if (pending == null || !mounted) {
+        return;
+      }
+      await controller.seekTo(pending);
+      if (!controller.value.isPlaying) {
+        await controller.play();
+      }
+      if (mounted) {
+        setState(() => _pendingSeek = null);
+      }
+    });
+  }
+
   void _cycleAspect(bool forward) {
     setState(() => _aspect = forward ? _aspect.next : _aspect.previous);
     if (!_tracksVisible) {
@@ -591,24 +635,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
     }
 
     final Duration base = _pendingSeek ?? controller.value.position;
-    final int targetMs = (base + delta).inMilliseconds.clamp(0, duration.inMilliseconds);
-    setState(() => _pendingSeek = Duration(milliseconds: targetMs));
-    _showOsd();
-
-    _seekTimer?.cancel();
-    _seekTimer = Timer(const Duration(milliseconds: 350), () async {
-      final Duration? target = _pendingSeek;
-      if (target == null || !mounted) {
-        return;
-      }
-      await controller.seekTo(target);
-      if (!controller.value.isPlaying) {
-        await controller.play();
-      }
-      if (mounted) {
-        setState(() => _pendingSeek = null);
-      }
-    });
+    _seekTo(base + delta);
   }
 
   Future<void> _togglePlayPause() async {
@@ -839,6 +866,12 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
                 _buildVideo(controller)
               else
                 const ColoredBox(color: Colors.black),
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: _onSurfaceTap,
+                ),
+              ),
               if (_loading)
                 Center(
                   child: Column(
@@ -885,14 +918,21 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
                       ),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(36, 48, 36, 28),
+                      padding: FormFactor.isPhoneOf(context)
+                          ? const EdgeInsets.fromLTRB(20, 28, 20, 16)
+                          : const EdgeInsets.fromLTRB(36, 48, 36, 28),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             '${_index + 1}/${widget.playlist.length}  ${_current.title}',
-                            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: FormFactor.isPhoneOf(context) ? 18 : 28,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                           const SizedBox(height: 6),
                           Row(
@@ -913,7 +953,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                     color: AppColors.textSecondary,
-                                    fontSize: 16,
+                                    fontSize: 14,
                                   ),
                                 ),
                               ),
@@ -925,32 +965,68 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
                                   color: _pendingSeek != null
                                       ? AppColors.neonCyan
                                       : AppColors.textSecondary,
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: LinearProgressIndicator(
-                              value: progress,
-                              minHeight: 8,
-                              color: AppColors.neonCyan,
-                              backgroundColor: Colors.white24,
+                          const SizedBox(height: 10),
+                          if (FormFactor.isPhoneOf(context) &&
+                              _isOnDemand &&
+                              duration > Duration.zero)
+                            SliderTheme(
+                              data: SliderTheme.of(context).copyWith(
+                                trackHeight: 4,
+                                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                              ),
+                              child: Slider(
+                                value: progress,
+                                onChanged: (double value) {
+                                  _seekTo(
+                                    Duration(
+                                      milliseconds: (duration.inMilliseconds * value).round(),
+                                    ),
+                                  );
+                                },
+                                activeColor: AppColors.neonCyan,
+                                inactiveColor: Colors.white24,
+                              ),
+                            )
+                          else
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: LinearProgressIndicator(
+                                value: progress,
+                                minHeight: 8,
+                                color: AppColors.neonCyan,
+                                backgroundColor: Colors.white24,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            _isOnDemand
-                                ? 'Sol/Sağ: 10 sn  •  Yukarı/Aşağı: 1 dk  •  OK: Duraklat  •  OK basılı: Ses/Altyazı  •  Geri: Çıkış'
-                                : 'OK: Kanal listesi  •  OK basılı: Ses/Altyazı  •  Yukarı/Aşağı: Kanal  •  Geri: Çıkış',
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 14,
+                          const SizedBox(height: 10),
+                          if (FormFactor.isPhoneOf(context))
+                            _PhoneTransportBar(
+                              isOnDemand: _isOnDemand,
+                              isPaused: isPaused,
+                              canZap: widget.playlist.length > 1,
+                              onRewind: () => _seekBy(const Duration(seconds: -10)),
+                              onForward: () => _seekBy(const Duration(seconds: 10)),
+                              onPlayPause: _togglePlayPause,
+                              onPrev: () => _zap(-1),
+                              onNext: () => _zap(1),
+                              onChannels: _openChannelList,
+                              onTracks: _openTracks,
+                            )
+                          else
+                            Text(
+                              _isOnDemand
+                                  ? 'Sol/Sağ: 10 sn  •  Yukarı/Aşağı: 1 dk  •  OK: Duraklat  •  OK basılı: Ses/Altyazı  •  Geri: Çıkış'
+                                  : 'OK: Kanal listesi  •  OK basılı: Ses/Altyazı  •  Yukarı/Aşağı: Kanal  •  Geri: Çıkış',
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 14,
+                              ),
                             ),
-                          ),
                         ],
                       ),
                     ),
@@ -1015,6 +1091,74 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> with WidgetsBindingOb
   }
 }
 
+class _PhoneTransportBar extends StatelessWidget {
+  const _PhoneTransportBar({
+    required this.isOnDemand,
+    required this.isPaused,
+    required this.canZap,
+    required this.onRewind,
+    required this.onForward,
+    required this.onPlayPause,
+    required this.onPrev,
+    required this.onNext,
+    required this.onChannels,
+    required this.onTracks,
+  });
+
+  final bool isOnDemand;
+  final bool isPaused;
+  final bool canZap;
+  final VoidCallback onRewind;
+  final VoidCallback onForward;
+  final VoidCallback onPlayPause;
+  final VoidCallback onPrev;
+  final VoidCallback onNext;
+  final VoidCallback onChannels;
+  final VoidCallback onTracks;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (isOnDemand) ...[
+          _btn(Icons.replay_10_rounded, onRewind),
+          const SizedBox(width: 10),
+          _btn(isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded, onPlayPause),
+          const SizedBox(width: 10),
+          _btn(Icons.forward_10_rounded, onForward),
+        ] else ...[
+          if (canZap) ...[
+            _btn(Icons.skip_previous_rounded, onPrev),
+            const SizedBox(width: 10),
+            _btn(Icons.playlist_play_rounded, onChannels),
+            const SizedBox(width: 10),
+            _btn(Icons.skip_next_rounded, onNext),
+          ],
+        ],
+        const SizedBox(width: 10),
+        _btn(Icons.subtitles_outlined, onTracks),
+      ],
+    );
+  }
+
+  Widget _btn(IconData icon, VoidCallback onTap) {
+    return Material(
+      color: Colors.white12,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          width: 48,
+          height: 40,
+          child: Icon(icon, color: AppColors.neonCyan),
+        ),
+      ),
+    );
+  }
+}
+
 class _ChannelListPanel extends StatefulWidget {
   const _ChannelListPanel({
     required this.playlist,
@@ -1039,7 +1183,9 @@ class _ChannelListPanelState extends State<_ChannelListPanel> {
 
   // The panel is opened by an OK press that may still be held, so ignore
   // selections arriving from that same press.
-  final DateTime _acceptingFrom = DateTime.now().add(const Duration(milliseconds: 600));
+  final DateTime _acceptingFrom = FormFactor.isPhone
+      ? DateTime.now()
+      : DateTime.now().add(const Duration(milliseconds: 600));
 
   @override
   void initState() {
@@ -1059,7 +1205,7 @@ class _ChannelListPanelState extends State<_ChannelListPanel> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 460,
+      width: AppLayout.channelPanel(context),
       decoration: BoxDecoration(
         color: AppColors.background.withValues(alpha: 0.94),
         border: Border(
@@ -1219,7 +1365,9 @@ class _TracksPanelState extends State<_TracksPanel> {
   @override
   void initState() {
     super.initState();
-    _acceptingFrom = DateTime.now().add(_acceptDelay);
+    _acceptingFrom = FormFactor.isPhone
+        ? DateTime.now()
+        : DateTime.now().add(_acceptDelay);
     _cursor = _initialCursor();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -1305,8 +1453,17 @@ class _TracksPanelState extends State<_TracksPanel> {
     required bool selected,
   }) {
     final bool highlighted = index == _cursor;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+    return GestureDetector(
+      onTap: () {
+        setState(() => _cursor = index);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _activate();
+          }
+        });
+      },
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
       child: AnimatedScale(
         scale: highlighted ? 1.03 : 1,
         duration: const Duration(milliseconds: 180),
@@ -1339,6 +1496,7 @@ class _TracksPanelState extends State<_TracksPanel> {
           ),
         ),
       ),
+      ),
     );
   }
 
@@ -1349,7 +1507,7 @@ class _TracksPanelState extends State<_TracksPanel> {
       focusNode: _scopeFocus,
       onKeyEvent: _onKey,
       child: Container(
-        width: 420,
+        width: AppLayout.tracksPanel(context),
         decoration: BoxDecoration(
           color: AppColors.background.withValues(alpha: 0.95),
           border: Border(
@@ -1392,9 +1550,11 @@ class _TracksPanelState extends State<_TracksPanel> {
                 selected: false,
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Yukarı/Aşağı ile seçiniz, OK ile onaylayınız, Geri ile kapatınız. Gömülü ses bazı yayınlarda değişmeyebilir.',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.3),
+              Text(
+                FormFactor.isPhoneOf(context)
+                    ? 'Dokunarak seçiniz. Geri ile kapatınız. Gömülü ses bazı yayınlarda değişmeyebilir.'
+                    : 'Yukarı/Aşağı ile seçiniz, OK ile onaylayınız, Geri ile kapatınız. Gömülü ses bazı yayınlarda değişmeyebilir.',
+                style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.3),
               ),
             ],
           ),

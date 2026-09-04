@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../device/form_factor.dart';
 import '../theme/app_colors.dart';
 import 'neon_focus_card.dart';
 
@@ -14,7 +15,9 @@ Future<bool> showNeonConfirmDialog({
 }) async {
   // The dialog can be opened by a held D-Pad key, so ignore activations that
   // arrive from the same physical press that triggered it.
-  final DateTime acceptingFrom = DateTime.now().add(const Duration(milliseconds: 700));
+  final DateTime acceptingFrom = FormFactor.isPhone
+      ? DateTime.now()
+      : DateTime.now().add(const Duration(milliseconds: 700));
   bool isAccepting() => DateTime.now().isAfter(acceptingFrom);
 
   final bool? confirmed = await showDialog<bool>(

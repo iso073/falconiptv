@@ -5,11 +5,13 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'app.dart';
 import 'core/constants/hive_bootstrap.dart';
 import 'core/constants/hive_boxes.dart';
+import 'core/device/form_factor.dart';
 import 'features/profile/data/models/profile_model.dart';
 import 'features/profile/data/repositories/profile_repository.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await FormFactor.ensureInitialized();
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   await SystemChrome.setPreferredOrientations(const [
     DeviceOrientation.landscapeLeft,

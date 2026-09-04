@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/device/app_layout.dart';
 import '../../../../core/widgets/exit_confirm_dialog.dart';
 import '../../../../core/widgets/glassmorphism_bar.dart';
 import '../../../../core/widgets/neon_focus_card.dart';
@@ -34,7 +35,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
           decoration: BoxDecoration(gradient: AppColors.ambientGlow),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 22),
+              padding: AppLayout.pagePadding(context),
               child: Column(
                 children: [
                   GlassmorphismBar(
@@ -42,8 +43,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
                       children: [
                         NeonFocusCard(
                           autofocus: items.isEmpty,
-                          width: 56,
-                          height: 56,
+                          width: AppLayout.backButton(context),
+                          height: AppLayout.backButton(context),
                           padding: EdgeInsets.zero,
                           focusedScale: 1.08,
                           onActivate: () => Navigator.of(context).maybePop(),
@@ -52,10 +53,13 @@ class _FavoritesPageState extends State<FavoritesPage> {
                         const SizedBox(width: 16),
                         const Icon(Icons.star_rounded, color: AppColors.neonPurple, size: 32),
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: Text(
                             'Favoriler',
-                            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                            style: TextStyle(
+                              fontSize: AppLayout.titleSize(context),
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                         Text(
@@ -67,22 +71,23 @@ class _FavoritesPageState extends State<FavoritesPage> {
                   ),
                   const SizedBox(height: 20),
                   Expanded(
-                    child: items.isEmpty
+                    child: ClipRect(
+                      child: items.isEmpty
                         ? const Center(
                             child: Text(
-                              'Henüz favori eklenmedi. Bir karta uzun basarak ekleyebilirsiniz.',
+                              'Henüz favori eklenmedi. Bir karta basılı tutarak ekleyebilirsiniz.',
                               textAlign: TextAlign.center,
                               style: TextStyle(fontSize: 20, color: AppColors.textSecondary),
                             ),
                           )
                         : GridView.builder(
-                            clipBehavior: Clip.none,
+                            clipBehavior: AppLayout.phone(context) ? Clip.hardEdge : Clip.none,
                             itemCount: items.length,
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 5,
-                              crossAxisSpacing: 14,
-                              mainAxisSpacing: 14,
-                              childAspectRatio: 1,
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: AppLayout.searchColumns(context),
+                              crossAxisSpacing: AppLayout.catalogGap(context),
+                              mainAxisSpacing: AppLayout.catalogGap(context),
+                              childAspectRatio: AppLayout.catalogAspect(context),
                             ),
                             itemBuilder: (context, index) {
                               final PlayableItem item = items[index];
@@ -104,6 +109,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                               );
                             },
                           ),
+                    ),
                   ),
                 ],
               ),

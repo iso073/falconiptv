@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/services/tv_toast_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/device/app_layout.dart';
 import '../../../../core/widgets/exit_confirm_dialog.dart';
 import '../../../../core/widgets/glassmorphism_bar.dart';
 import '../../../../core/widgets/neon_focus_card.dart';
@@ -119,7 +120,7 @@ class _CatalogBrowserView extends StatelessWidget {
           decoration: BoxDecoration(gradient: AppColors.ambientGlow),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 22),
+              padding: AppLayout.pagePadding(context),
               child: BlocBuilder<CatalogCubit, CatalogState>(
                 builder: (context, state) {
                   return Column(
@@ -130,8 +131,8 @@ class _CatalogBrowserView extends StatelessWidget {
                           children: [
                             NeonFocusCard(
                               autofocus: state is! CatalogLoaded,
-                              width: 56,
-                              height: 56,
+                              width: AppLayout.backButton(context),
+                              height: AppLayout.backButton(context),
                               padding: EdgeInsets.zero,
                               focusedScale: 1.08,
                               onActivate: () => Navigator.of(context).maybePop(),
@@ -143,7 +144,10 @@ class _CatalogBrowserView extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 title,
-                                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                                style: TextStyle(
+                                  fontSize: AppLayout.titleSize(context),
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ),
                             if (state is CatalogLoaded)
@@ -157,8 +161,10 @@ class _CatalogBrowserView extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 22),
-                      Expanded(child: _buildBody(context, state)),
+                      SizedBox(height: AppLayout.phone(context) ? 10 : 22),
+                      Expanded(
+                        child: ClipRect(child: _buildBody(context, state)),
+                      ),
                     ],
                   );
                 },
@@ -229,42 +235,50 @@ class _CatalogBrowserView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SizedBox(
-          width: 280,
+          width: AppLayout.categoryRail(context),
           child: ListView.separated(
-            clipBehavior: Clip.none,
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+            clipBehavior: AppLayout.phone(context) ? Clip.hardEdge : Clip.none,
+            padding: EdgeInsets.symmetric(
+              vertical: AppLayout.phone(context) ? 4 : 8,
+              horizontal: AppLayout.phone(context) ? 2 : 6,
+            ),
             itemCount: loaded.categories.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            separatorBuilder: (context, index) =>
+                SizedBox(height: AppLayout.phone(context) ? 6 : 12),
             itemBuilder: (context, index) {
               final String category = loaded.categories[index];
               final bool selected = category == loaded.selectedCategory;
               final bool locked = context.read<CatalogCubit>().isCategoryLocked(category);
+              final bool phone = AppLayout.phone(context);
               return NeonFocusCard(
                 glowColor: locked ? AppColors.neonPurple : accent,
                 focusedScale: 1.05,
                 unfocusedOpacity: selected ? 1 : 0.55,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: EdgeInsets.symmetric(
+                  horizontal: phone ? 10 : 16,
+                  vertical: phone ? 8 : 14,
+                ),
                 onActivate: () => _selectCategory(context, category),
                 child: Row(
                   children: [
                     Expanded(
                       child: Text(
                         category,
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: phone ? 13 : 18,
                           fontWeight: FontWeight.w800,
                           color: selected ? accent : AppColors.textPrimary,
                         ),
                       ),
                     ),
                     if (locked)
-                      const Padding(
-                        padding: EdgeInsets.only(left: 8),
+                      Padding(
+                        padding: EdgeInsets.only(left: phone ? 4 : 8),
                         child: Icon(
                           Icons.lock_outline,
-                          size: 20,
+                          size: phone ? 16 : 20,
                           color: AppColors.neonPurple,
                         ),
                       ),
@@ -274,7 +288,7 @@ class _CatalogBrowserView extends StatelessWidget {
             },
           ),
         ),
-        const SizedBox(width: 22),
+        SizedBox(width: AppLayout.phone(context) ? 10 : 22),
         Expanded(
           child: items.isEmpty
               ? const Center(
@@ -284,14 +298,17 @@ class _CatalogBrowserView extends StatelessWidget {
                   ),
                 )
               : GridView.builder(
-                  clipBehavior: Clip.none,
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                  clipBehavior: AppLayout.phone(context) ? Clip.hardEdge : Clip.none,
+                  padding: EdgeInsets.symmetric(
+                    vertical: AppLayout.phone(context) ? 4 : 8,
+                    horizontal: AppLayout.phone(context) ? 2 : 6,
+                  ),
                   itemCount: items.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 1,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: AppLayout.catalogColumns(context),
+                    crossAxisSpacing: AppLayout.catalogGap(context),
+                    mainAxisSpacing: AppLayout.catalogGap(context),
+                    childAspectRatio: AppLayout.catalogAspect(context),
                   ),
                   itemBuilder: (context, index) {
                     return CatalogTile(
@@ -321,10 +338,6 @@ class CatalogTile extends StatelessWidget {
     this.autofocus = false,
   });
 
-  // Reserved so long channel names can wrap to two lines without pushing the
-  // thumbnail out of the card.
-  static const double _labelHeight = 62;
-
   final PlayableItem item;
   final Color accent;
   final IconData icon;
@@ -334,42 +347,44 @@ class CatalogTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool phone = AppLayout.phone(context);
+    final double labelHeight = phone ? 34 : 62;
     return NeonFocusCard(
       autofocus: autofocus,
       glowColor: accent,
       focusedScale: 1.07,
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(phone ? 6 : 12),
       onActivate: onActivate,
       onLongPress: onLongPress,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(child: _Thumbnail(item: item, accent: accent, icon: icon)),
-          const SizedBox(height: 8),
+          SizedBox(height: phone ? 4 : 8),
           SizedBox(
-            height: _labelHeight,
+            height: labelHeight,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   item.title,
-                  maxLines: 2,
+                  maxLines: phone ? 1 : 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    height: 1.25,
+                  style: TextStyle(
+                    fontSize: phone ? 12 : 15,
+                    height: 1.2,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: phone ? 2 : 4),
                 Text(
                   item.subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 12,
-                    height: 1.25,
+                    fontSize: phone ? 10 : 12,
+                    height: 1.2,
                   ),
                 ),
               ],

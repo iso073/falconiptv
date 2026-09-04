@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../device/form_factor.dart';
 import '../theme/app_colors.dart';
 
 class NeonFocusCard extends StatefulWidget {
@@ -50,6 +51,7 @@ class _NeonFocusCardState extends State<NeonFocusCard> {
   late final FocusNode _ownedNode;
   FocusNode get _focusNode => widget.focusNode ?? _ownedNode;
   bool _focused = false;
+  bool _pressed = false;
   Timer? _holdTimer;
   Timer? _releaseTimer;
   bool _pressing = false;
@@ -169,11 +171,18 @@ class _NeonFocusCardState extends State<NeonFocusCard> {
 
   @override
   Widget build(BuildContext context) {
+    final bool phone = FormFactor.isPhoneOf(context);
+    final bool highlighted = phone ? _pressed : _focused;
+    final double opacity = phone ? 1 : (_focused ? 1 : widget.unfocusedOpacity);
+    final double scale = phone ? (highlighted ? 0.98 : 1) : (_focused ? widget.focusedScale : 1);
     return Focus(
       focusNode: _focusNode,
       autofocus: widget.autofocus,
       onKeyEvent: _onKeyEvent,
       child: GestureDetector(
+        onTapDown: phone ? (_) => setState(() => _pressed = true) : null,
+        onTapCancel: phone ? () => setState(() => _pressed = false) : null,
+        onTapUp: phone ? (_) => setState(() => _pressed = false) : null,
         onTap: () {
           _focusNode.requestFocus();
           widget.onActivate?.call();
@@ -185,14 +194,14 @@ class _NeonFocusCardState extends State<NeonFocusCard> {
                 widget.onLongPress!.call();
               },
         child: AnimatedScale(
-          scale: _focused ? widget.focusedScale : 1,
-          duration: const Duration(milliseconds: 300),
+          scale: scale,
+          duration: Duration(milliseconds: phone ? 180 : 300),
           curve: Curves.easeOutCubic,
           child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 300),
-            opacity: _focused ? 1 : widget.unfocusedOpacity,
+            duration: Duration(milliseconds: phone ? 180 : 300),
+            opacity: opacity,
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
+              duration: Duration(milliseconds: phone ? 180 : 300),
               curve: Curves.easeOutCubic,
               width: widget.width,
               height: widget.height,
@@ -201,14 +210,14 @@ class _NeonFocusCardState extends State<NeonFocusCard> {
                 color: AppColors.surfaceElevated,
                 borderRadius: BorderRadius.circular(widget.borderRadius),
                 border: Border.all(
-                  color: _focused ? widget.glowColor : AppColors.glassBorder,
-                  width: 3,
+                  color: highlighted ? widget.glowColor : AppColors.glassBorder,
+                  width: highlighted ? (phone ? 2.4 : 3) : (phone ? 1.4 : 3),
                 ),
-                boxShadow: _focused
+                boxShadow: highlighted
                     ? [
                         BoxShadow(
-                          color: widget.glowColor.withValues(alpha: 0.45),
-                          blurRadius: 16,
+                          color: widget.glowColor.withValues(alpha: phone ? 0.28 : 0.45),
+                          blurRadius: phone ? 10 : 16,
                           spreadRadius: 0,
                           offset: Offset.zero,
                         ),

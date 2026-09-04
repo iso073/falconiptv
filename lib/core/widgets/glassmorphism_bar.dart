@@ -2,17 +2,18 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../device/app_layout.dart';
 import '../theme/app_colors.dart';
 
 class GlassmorphismBar extends StatelessWidget {
   const GlassmorphismBar({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+    this.padding,
   });
 
   final Widget child;
-  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry? padding;
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +33,10 @@ class GlassmorphismBar extends StatelessWidget {
               ),
             ],
           ),
-          child: Padding(padding: padding, child: child),
+          child: Padding(
+            padding: padding ?? AppLayout.glassPadding(context),
+            child: child,
+          ),
         ),
       ),
     );

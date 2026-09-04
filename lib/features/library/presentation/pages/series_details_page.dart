@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/device/app_layout.dart';
 import '../../../../core/widgets/exit_confirm_dialog.dart';
 import '../../../../core/widgets/glassmorphism_bar.dart';
 import '../../../../core/widgets/neon_focus_card.dart';
@@ -74,7 +75,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
           decoration: BoxDecoration(gradient: AppColors.ambientGlow),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 22),
+              padding: AppLayout.pagePadding(context),
               child: Column(
                 children: [
                   GlassmorphismBar(
@@ -82,8 +83,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                       children: [
                         NeonFocusCard(
                           autofocus: details == null,
-                          width: 56,
-                          height: 56,
+                          width: AppLayout.backButton(context),
+                          height: AppLayout.backButton(context),
                           padding: EdgeInsets.zero,
                           focusedScale: 1.08,
                           onActivate: () => Navigator.of(context).maybePop(),
@@ -97,14 +98,21 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                             widget.series.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                            style: TextStyle(
+                              fontSize: AppLayout.titleSize(context),
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Expanded(child: _buildBody(details)),
+                  Expanded(
+                    child: ClipRect(
+                      child: _buildBody(details),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -132,9 +140,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     return Row(
       children: [
         SizedBox(
-          width: 240,
+          width: AppLayout.seasonRail(context),
           child: ListView.separated(
-            clipBehavior: Clip.none,
+            clipBehavior: AppLayout.phone(context) ? Clip.hardEdge : Clip.none,
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
             itemCount: details.seasons.length,
             separatorBuilder: (context, index) => const SizedBox(height: 12),
@@ -159,14 +167,14 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
         const SizedBox(width: 18),
         Expanded(
           child: GridView.builder(
-            clipBehavior: Clip.none,
+            clipBehavior: AppLayout.phone(context) ? Clip.hardEdge : Clip.none,
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
             itemCount: season.episodes.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 14,
-              mainAxisSpacing: 14,
-              childAspectRatio: 1.15,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: AppLayout.phone(context) ? 4 : 3,
+              crossAxisSpacing: AppLayout.catalogGap(context),
+              mainAxisSpacing: AppLayout.catalogGap(context),
+              childAspectRatio: AppLayout.phone(context) ? 1.05 : 1.15,
             ),
             itemBuilder: (context, index) {
               return CatalogTile(

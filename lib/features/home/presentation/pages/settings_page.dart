@@ -7,6 +7,7 @@ import '../../../../core/update/app_update_config.dart';
 import '../../../../core/update/app_update_flow.dart';
 import '../../../../core/update/app_update_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/device/app_layout.dart';
 import '../../../../core/widgets/exit_confirm_dialog.dart';
 import '../../../../core/widgets/falcon_logo.dart';
 import '../../../../core/widgets/glassmorphism_bar.dart';
@@ -147,7 +148,7 @@ class _SettingsPageState extends State<SettingsPage> {
           decoration: BoxDecoration(gradient: AppColors.ambientGlow),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 28),
+              padding: AppLayout.pagePadding(context),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -162,25 +163,28 @@ class _SettingsPageState extends State<SettingsPage> {
                       children: [
                         NeonFocusCard(
                           autofocus: true,
-                          width: 56,
-                          height: 56,
+                          width: AppLayout.backButton(context),
+                          height: AppLayout.backButton(context),
                           padding: EdgeInsets.zero,
                           focusedScale: 1.08,
                           onActivate: () => Navigator.of(context).maybePop(),
                           child: const Center(child: Icon(Icons.arrow_back_rounded)),
                         ),
                         const SizedBox(width: 16),
-                        const Expanded(
+                        Expanded(
                           child: Text(
                             'Sistem Ayarları',
-                            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                            style: TextStyle(
+                              fontSize: AppLayout.titleSize(context),
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                       ],
                     ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: AppLayout.phone(context) ? 8 : 24),
                   Expanded(
                     child: BlocBuilder<ProfileCubit, ProfileState>(
                       builder: (context, state) {
@@ -205,11 +209,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                     leading: const Icon(
                                       Icons.wifi_tethering,
                                       color: AppColors.neonCyan,
-                                      size: 32,
                                     ),
                                     title: const Text(
                                       'Bağlantı Durumu',
-                                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                                      style: TextStyle(fontWeight: FontWeight.w700),
                                     ),
                                     subtitle: Text(
                                       '${snapshot.title} • ${snapshot.detail}',
@@ -227,11 +230,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                 leading: const Icon(
                                   Icons.person_outline,
                                   color: AppColors.neonCyan,
-                                  size: 32,
                                 ),
                                 title: const Text(
                                   'Aktif Oturum',
-                                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                                  style: TextStyle(fontWeight: FontWeight.w700),
                                 ),
                                 subtitle: Text(
                                   profile?.profileName ?? 'Aktif profil atanmadı',
@@ -247,11 +249,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                 leading: const Icon(
                                   Icons.dns_outlined,
                                   color: AppColors.neonCyan,
-                                  size: 32,
                                 ),
                                 title: const Text(
                                   'Bağlantı Türü',
-                                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                                  style: TextStyle(fontWeight: FontWeight.w700),
                                 ),
                                 subtitle: Text(
                                   _connectionSummary(profile),
@@ -269,11 +270,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                     leading: const Icon(
                                       Icons.sports_soccer_rounded,
                                       color: AppColors.neonCyan,
-                                      size: 32,
                                     ),
                                     title: const Text(
                                       'Spor Modu',
-                                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                                      style: TextStyle(fontWeight: FontWeight.w700),
                                     ),
                                     subtitle: Text(
                                       sportOn
@@ -285,7 +285,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                     trailing: Icon(
                                       sportOn ? Icons.toggle_on_rounded : Icons.toggle_off_outlined,
                                       color: sportOn ? AppColors.neonCyan : AppColors.textSecondary,
-                                      size: 36,
+                                      size: AppLayout.phone(context) ? 28 : 36,
                                     ),
                                   ),
                                 );
@@ -298,11 +298,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                 leading: const Icon(
                                   Icons.shield_outlined,
                                   color: AppColors.neonPurple,
-                                  size: 32,
                                 ),
                                 title: const Text(
                                   'Yetişkin İçerik Koruması',
-                                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                                  style: TextStyle(fontWeight: FontWeight.w700),
                                 ),
                                 subtitle: Text(
                                   _parental.isProtectionEnabled
@@ -326,11 +325,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                 leading: Icon(
                                   Icons.password_outlined,
                                   color: AppColors.neonPurple,
-                                  size: 32,
                                 ),
                                 title: Text(
                                   'Erişim Şifresini Değiştir',
-                                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                                  style: TextStyle(fontWeight: FontWeight.w700),
                                 ),
                                 subtitle: Text(
                                   'Varsayılan şifre 0000 olarak tanımlanmıştır.',
@@ -352,11 +350,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                 leading: const Icon(
                                   Icons.system_update_alt,
                                   color: AppColors.neonCyan,
-                                  size: 32,
                                 ),
                                 title: const Text(
                                   'Güncellemeleri Denetle',
-                                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                                  style: TextStyle(fontWeight: FontWeight.w700),
                                 ),
                                 subtitle: Text(
                                   'GitHub üzerinden yeni sürüm aranır. Yüklü sürüm ${AppVersionInfo.current.name}',
@@ -385,11 +382,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                 leading: Icon(
                                   Icons.switch_account,
                                   color: AppColors.neonPurple,
-                                  size: 32,
                                 ),
                                 title: Text(
                                   'Profil Yönetimi',
-                                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                                  style: TextStyle(fontWeight: FontWeight.w700),
                                 ),
                                 subtitle: Text(
                                   'Aktif profili değiştirmek için profil seçim ekranına dönünüz.',
@@ -404,12 +400,17 @@ class _SettingsPageState extends State<SettingsPage> {
                       },
                     ),
                   ),
-                  const Center(child: FalconLogo(height: 72)),
-                  const SizedBox(height: 8),
+                  Center(
+                    child: FalconLogo(height: AppLayout.phone(context) ? 36 : 72),
+                  ),
+                  SizedBox(height: AppLayout.phone(context) ? 4 : 8),
                   Text(
                     'Sürüm ${AppVersionInfo.current.name}',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: AppLayout.phone(context) ? 12 : 14,
+                    ),
                   ),
                 ],
               ),
@@ -460,23 +461,39 @@ class _SettingsListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool phone = AppLayout.phone(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(vertical: phone ? 3 : 8),
       child: _StableListFocus(
         child: NeonFocusCard(
           glowColor: glowColor,
           focusedScale: 1.0,
           unfocusedOpacity: 0.85,
-          borderRadius: 26,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          borderRadius: phone ? 14 : 26,
+          padding: EdgeInsets.symmetric(
+            horizontal: phone ? 6 : 10,
+            vertical: phone ? 0 : 4,
+          ),
           onActivate: onActivate,
           child: Theme(
             data: Theme.of(context).copyWith(
-              listTileTheme: const ListTileThemeData(
-                contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                minVerticalPadding: 12,
-                minLeadingWidth: 40,
-                visualDensity: VisualDensity.standard,
+              iconTheme: IconThemeData(size: phone ? 22 : 32),
+              listTileTheme: ListTileThemeData(
+                contentPadding: EdgeInsets.symmetric(horizontal: phone ? 8 : 12),
+                minVerticalPadding: phone ? 2 : 12,
+                minLeadingWidth: phone ? 28 : 40,
+                visualDensity: phone
+                    ? const VisualDensity(horizontal: -2, vertical: -3)
+                    : VisualDensity.standard,
+                titleTextStyle: TextStyle(
+                  fontSize: phone ? 15 : 22,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+                subtitleTextStyle: TextStyle(
+                  fontSize: phone ? 12 : 14,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ),
             child: child,

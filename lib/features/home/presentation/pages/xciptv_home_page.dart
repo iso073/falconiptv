@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/device/app_layout.dart';
 import '../../../../core/update/app_update_flow.dart';
 import '../../../../core/update/app_update_service.dart';
 import '../../../../core/update/app_update_status_badge.dart';
@@ -128,13 +129,13 @@ class _XCIPTVHomePageState extends State<XCIPTVHomePage> {
           decoration: BoxDecoration(gradient: AppColors.ambientGlow),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 22),
+              padding: AppLayout.pagePadding(context),
               child: Column(
                 children: [
                   GlassmorphismBar(
                     child: Row(
                       children: [
-                        const FalconLogo(height: 54, glow: true),
+                        FalconLogo(height: AppLayout.headerLogo(context), glow: true),
                         const SportModeStatusBadge(),
                         const Spacer(),
                         const AppUpdateStatusBadge(),
@@ -178,7 +179,7 @@ class _XCIPTVHomePageState extends State<XCIPTVHomePage> {
                     ),
                     const SizedBox(height: 10),
                     SizedBox(
-                      height: 92,
+                      height: AppLayout.resumeHeight(context),
                       child: ListView.separated(
                         clipBehavior: Clip.none,
                         scrollDirection: Axis.horizontal,
@@ -229,11 +230,11 @@ class _XCIPTVHomePageState extends State<XCIPTVHomePage> {
                       child: GridView.builder(
                         itemCount: _modules.length,
                         clipBehavior: Clip.none,
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                          childAspectRatio: 1.35,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: AppLayout.homeColumns(),
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: AppLayout.homeAspect(context),
                         ),
                         itemBuilder: (context, index) {
                           final _HomeModule module = _modules[index];
@@ -246,13 +247,17 @@ class _XCIPTVHomePageState extends State<XCIPTVHomePage> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(module.icon, size: 48, color: module.glow),
-                                  const SizedBox(height: 14),
+                                  Icon(
+                                    module.icon,
+                                    size: AppLayout.homeIcon(context),
+                                    color: module.glow,
+                                  ),
+                                  SizedBox(height: AppLayout.phone(context) ? 8 : 14),
                                   Text(
                                     module.title,
                                     textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      fontSize: 18,
+                                    style: TextStyle(
+                                      fontSize: AppLayout.homeTitleSize(context),
                                       fontWeight: FontWeight.w900,
                                       letterSpacing: 0.6,
                                     ),

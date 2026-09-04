@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -5,6 +7,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import 'core/constants/hive_bootstrap.dart';
 import 'core/constants/hive_boxes.dart';
+import 'core/device/form_factor.dart';
 import 'core/network/iptv_dio_client.dart';
 import 'core/theme/app_theme.dart';
 import 'core/update/app_update_service.dart';
@@ -50,6 +53,15 @@ class _FalconIptvAppState extends State<FalconIptvApp> {
       xtreamRepository: _xtreamRepository,
     );
     _ensureBoxes();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(
+        FormFactor.ensureInitialized().then((_) {
+          if (mounted) {
+            setState(() {});
+          }
+        }),
+      );
+    });
   }
 
   Future<void> _ensureBoxes() async {

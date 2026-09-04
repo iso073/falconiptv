@@ -3,6 +3,7 @@ package com.falconiptv.app
 import android.content.Intent
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -73,6 +74,14 @@ class MainActivity : FlutterActivity() {
                     result.notImplemented()
                 }
             }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "falconiptv/device")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "deviceProfile" -> result.success(deviceProfile())
+                    "isTelevision" -> result.success(deviceProfile()["isTelevision"])
+                    else -> result.notImplemented()
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "falconiptv/update")
             .setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -110,6 +119,33 @@ class MainActivity : FlutterActivity() {
     override fun onDestroy() {
         setPlaybackKeepAwake(false)
         super.onDestroy()
+    }
+
+    private fun deviceProfile(): Map<String, Any> {
+        val pm = packageManager
+        val uiType = resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK
+        val leanback = pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+        val leanbackOnly = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK_ONLY)
+        @Suppress("DEPRECATION")
+        val television = pm.hasSystemFeature(PackageManager.FEATURE_TELEVISION)
+        val uiTelevision = uiType == Configuration.UI_MODE_TYPE_TELEVISION
+        val fireTv = pm.hasSystemFeature("amazon.hardware.fire_tv")
+        val watch = pm.hasSystemFeature(PackageManager.FEATURE_WATCH)
+        val automotive = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+            pm.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)
+        val isTelevision = !watch && !automotive &&
+            (leanback || leanbackOnly || television || uiTelevision || fireTv)
+        return mapOf(
+            "isTelevision" to isTelevision,
+            "leanback" to leanback,
+            "leanbackOnly" to leanbackOnly,
+            "televisionFeature" to television,
+            "uiModeTelevision" to uiTelevision,
+            "fireTv" to fireTv,
+            "watch" to watch,
+            "automotive" to automotive,
+        )
     }
 
     private fun canInstallPackages(): Boolean {

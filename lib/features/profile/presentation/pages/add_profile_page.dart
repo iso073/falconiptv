@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/services/tv_toast_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/device/app_layout.dart';
+import '../../../../core/device/form_factor.dart';
 import '../../../../core/widgets/exit_confirm_dialog.dart';
 import '../../../../core/widgets/glassmorphism_bar.dart';
 import '../../../../core/widgets/neon_focus_card.dart';
@@ -221,7 +223,7 @@ class _AddProfilePageState extends State<AddProfilePage> {
         decoration: BoxDecoration(gradient: AppColors.ambientGlow),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 28),
+            padding: AppLayout.pagePadding(context),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -229,8 +231,8 @@ class _AddProfilePageState extends State<AddProfilePage> {
                   child: Row(
                     children: [
                       NeonFocusCard(
-                        width: 56,
-                        height: 56,
+                        width: AppLayout.backButton(context),
+                        height: AppLayout.backButton(context),
                         padding: EdgeInsets.zero,
                         focusedScale: 1.08,
                         onActivate: () => Navigator.of(context).maybePop(),
@@ -239,10 +241,13 @@ class _AddProfilePageState extends State<AddProfilePage> {
                       const SizedBox(width: 16),
                       Text(
                         _isEditing ? 'Profili Düzenle' : 'Yeni Profil Oluştur',
-                        style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                        style: TextStyle(
+                          fontSize: AppLayout.titleSize(context),
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                       const Spacer(),
-                      if (!_isEditing)
+                      if (!_isEditing && FormFactor.isTelevisionOf(context))
                         NeonFocusCard(
                           glowColor: AppColors.neonCyan,
                           focusedScale: 1.06,

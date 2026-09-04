@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/device/app_layout.dart';
+import '../../../../core/device/form_factor.dart';
 import '../../../../core/widgets/exit_confirm_dialog.dart';
 import '../../../../core/widgets/glassmorphism_bar.dart';
 import '../../../../core/widgets/neon_focus_card.dart';
@@ -87,22 +89,28 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    final bool keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final EdgeInsets pagePad = AppLayout.pagePadding(context);
     return TvBackScope(
       onBack: () => popToPreviousPage(context),
       child: Scaffold(
+        resizeToAvoidBottomInset: true,
         body: DecoratedBox(
           decoration: BoxDecoration(gradient: AppColors.ambientGlow),
           child: SafeArea(
+            bottom: !keyboardOpen,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 22),
+              padding: keyboardOpen
+                  ? EdgeInsets.fromLTRB(pagePad.left, 4, pagePad.right, 4)
+                  : pagePad,
               child: Column(
                 children: [
                   GlassmorphismBar(
                     child: Row(
                       children: [
                         NeonFocusCard(
-                          width: 56,
-                          height: 56,
+                          width: AppLayout.backButton(context),
+                          height: AppLayout.backButton(context),
                           padding: EdgeInsets.zero,
                           focusedScale: 1.08,
                           onActivate: () => Navigator.of(context).maybePop(),
@@ -111,22 +119,30 @@ class _SearchPageState extends State<SearchPage> {
                         const SizedBox(width: 16),
                         const Icon(Icons.search, color: AppColors.neonCyan, size: 32),
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: Text(
                             'Arama',
-                            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                            style: TextStyle(
+                              fontSize: AppLayout.titleSize(context),
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  SizedBox(height: keyboardOpen ? 6 : 18),
                   TvTextField(
                     label: 'Kanal, film veya dizi adı',
                     controller: _query,
                     textInputAction: TextInputAction.search,
-                    onSubmitted: (_) => _search(),
+                    onChanged: FormFactor.isPhoneOf(context) ? (_) => _search() : null,
+                    onSubmitted: (_) {
+                      FocusScope.of(context).unfocus();
+                      _search();
+                    },
                   ),
+                  if (!FormFactor.isPhoneOf(context)) ...[
                   const SizedBox(height: 14),
                   SizedBox(
                     height: 168,
@@ -172,8 +188,9 @@ class _SearchPageState extends State<SearchPage> {
                       },
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Expanded(child: _buildResults()),
+                  ],
+                  SizedBox(height: keyboardOpen ? 4 : 12),
+                  Expanded(child: ClipRect(child: _buildResults())),
                 ],
               ),
             ),
@@ -207,13 +224,13 @@ class _SearchPageState extends State<SearchPage> {
       );
     }
     return GridView.builder(
-      clipBehavior: Clip.none,
+      clipBehavior: AppLayout.phone(context) ? Clip.hardEdge : Clip.none,
       itemCount: _results.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 5,
-        crossAxisSpacing: 14,
-        mainAxisSpacing: 14,
-        childAspectRatio: 1,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: AppLayout.searchColumns(context),
+        crossAxisSpacing: AppLayout.catalogGap(context),
+        mainAxisSpacing: AppLayout.catalogGap(context),
+        childAspectRatio: AppLayout.catalogAspect(context),
       ),
       itemBuilder: (context, index) {
         final PlayableItem item = _results[index];

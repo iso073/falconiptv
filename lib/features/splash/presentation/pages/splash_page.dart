@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/falcon_logo.dart';
 import '../../../profile/presentation/pages/profile_selection_page.dart';
+import '../../../../core/device/app_layout.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -61,17 +62,17 @@ class _SplashPageState extends State<SplashPage> {
           child: AnimatedOpacity(
             duration: const Duration(milliseconds: 600),
             opacity: _visible ? 1 : 0,
-            child: const Column(
+            child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                FalconLogo(height: 280, glow: true),
-                SizedBox(height: 18),
-                Text(
+                FalconLogo(height: AppLayout.splashLogo(context), glow: true),
+                const SizedBox(height: 18),
+                const Text(
                   'Sisteme Hoş Geldiniz',
                   style: TextStyle(fontSize: 18, color: AppColors.textSecondary),
                 ),
-                SizedBox(height: 36),
-                SizedBox(
+                const SizedBox(height: 36),
+                const SizedBox(
                   width: 220,
                   child: LinearProgressIndicator(
                     minHeight: 4,

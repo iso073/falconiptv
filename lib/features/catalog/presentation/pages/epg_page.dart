@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/device/app_layout.dart';
 import '../../../../core/widgets/exit_confirm_dialog.dart';
 import '../../../../core/widgets/glassmorphism_bar.dart';
 import '../../../../core/widgets/neon_focus_card.dart';
@@ -40,7 +41,7 @@ class _EpgView extends StatelessWidget {
           decoration: BoxDecoration(gradient: AppColors.ambientGlow),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 22),
+              padding: AppLayout.pagePadding(context),
               child: BlocBuilder<EpgCubit, EpgState>(
                 builder: (context, state) {
                   return Column(
@@ -51,8 +52,8 @@ class _EpgView extends StatelessWidget {
                           children: [
                             NeonFocusCard(
                               autofocus: state is! EpgLoaded,
-                              width: 56,
-                              height: 56,
+                              width: AppLayout.backButton(context),
+                              height: AppLayout.backButton(context),
                               padding: EdgeInsets.zero,
                               focusedScale: 1.08,
                               onActivate: () => Navigator.of(context).maybePop(),
@@ -65,17 +66,20 @@ class _EpgView extends StatelessWidget {
                               size: 32,
                             ),
                             const SizedBox(width: 12),
-                            const Expanded(
+                            Expanded(
                               child: Text(
                                 'Yayın Akışı (EPG)',
-                                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                                style: TextStyle(
+                                  fontSize: AppLayout.titleSize(context),
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 20),
-                      Expanded(child: _buildBody(context, state)),
+                      Expanded(child: ClipRect(child: _buildBody(context, state))),
                     ],
                   );
                 },
