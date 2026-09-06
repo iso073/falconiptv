@@ -18,6 +18,8 @@ jobs:
           channel: stable
       - run: flutter pub get
       - run: flutter build apk --release
+      - name: Verify 16KB ELF alignment
+        run: python3 tool/check_16kb_apk.py build/app/outputs/flutter-apk/app-release.apk
       - name: Rename APK
         run: cp build/app/outputs/flutter-apk/app-release.apk falconiptv.apk
       - uses: softprops/action-gh-release@v2

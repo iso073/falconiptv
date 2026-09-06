@@ -36,6 +36,17 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
+        }
+    }
+
+    // Uncompressed, 16 KB-zip-aligned JNI libs. Required on newer Google TV
+    // boxes (Amlogic S905X5M / Nova 2 class) that use 16 KB memory pages.
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
     }
 
     signingConfigs {
