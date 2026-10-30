@@ -1,0 +1,238 @@
+:root {
+  color-scheme: dark;
+  --bg: #07080c;
+  --bg-soft: #0c0e16;
+  --surface: rgba(18, 20, 28, 0.72);
+  --line: rgba(255, 255, 255, 0.08);
+  --cyan: #00f0ff;
+  --cyan-dim: rgba(0, 240, 255, 0.14);
+  --text: #f4f7ff;
+  --muted: #9aa3b8;
+  --radius: 22px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: "Outfit", system-ui, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(900px 480px at 50% -10%, rgba(0, 240, 255, 0.16), transparent 55%),
+    radial-gradient(700px 420px at 100% 80%, rgba(176, 38, 255, 0.08), transparent 50%),
+    linear-gradient(180deg, #0a0b10 0%, var(--bg) 40%, #08090f 100%);
+  line-height: 1.6;
+}
+
+a { color: var(--cyan); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.wrap {
+  width: min(980px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 0 8px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.brand img {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 240, 255, 0.28);
+  background: #05060a;
+  object-fit: cover;
+  box-shadow: 0 0 18px rgba(0, 240, 255, 0.12);
+}
+
+.brand-name {
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  font-size: 13px;
+}
+
+.nav {
+  display: flex;
+  gap: 8px;
+}
+
+.nav a {
+  color: var(--muted);
+  text-decoration: none;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 14px;
+}
+
+.nav a:hover,
+.nav a.is-active {
+  color: var(--text);
+  background: var(--cyan-dim);
+  text-decoration: none;
+}
+
+.hero {
+  text-align: center;
+  padding: 48px 0 28px;
+}
+
+.hero-logo {
+  width: min(280px, 70vw);
+  height: auto;
+  margin: 0 auto 8px;
+  display: block;
+  filter: drop-shadow(0 0 28px rgba(0, 240, 255, 0.18));
+}
+
+.kicker {
+  color: var(--cyan);
+  letter-spacing: 0.22em;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+
+h1 {
+  font-size: clamp(32px, 5vw, 52px);
+  line-height: 1.1;
+  margin: 0 0 14px;
+  letter-spacing: -0.03em;
+}
+
+.lede {
+  max-width: 620px;
+  margin: 0 auto 28px;
+  color: var(--muted);
+  font-size: 18px;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 28px;
+  padding: 0;
+  list-style: none;
+}
+
+.pills li {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: var(--cyan);
+  color: #041016;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.btn:hover { filter: brightness(1.05); text-decoration: none; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  padding: 12px 0 64px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px;
+  backdrop-filter: blur(16px);
+}
+
+.card h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: var(--cyan);
+}
+
+.card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.article {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  padding: 36px 32px 40px;
+  margin: 24px 0 72px;
+  backdrop-filter: blur(16px);
+}
+
+.meta {
+  color: var(--muted);
+  margin: 0 0 22px;
+  font-size: 14px;
+}
+
+.article h2 {
+  font-size: 18px;
+  color: var(--cyan);
+  margin: 28px 0 8px;
+}
+
+.article p,
+.article li {
+  color: var(--muted);
+}
+
+.article ul {
+  padding-left: 18px;
+}
+
+.en {
+  margin-top: 36px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+footer {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 0 0 40px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 760px) {
+  .grid { grid-template-columns: 1fr; }
+  .article { padding: 24px 18px 32px; }
+  .hero { padding: 28px 0 16px; }
+  .hero-logo { width: min(200px, 64vw); }
+}
